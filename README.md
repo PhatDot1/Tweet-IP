@@ -1,6 +1,29 @@
 TODO:
 Streamline comms between frontend and backend for proper error handling and edge cases not being a black box to users
 
+Adding:
+custom PIL license
+IP metadata
+Link co-creators 
+
+/////////
+
+WANT TO:
+Pre-mint a license manually before the IP registration
+AKA need to:
+
+Deploy the NFT collection
+
+Call create_license(...) with a known/fixed ref_ip_id
+
+Then register the IP and attach license terms in the same call
+
+////////
+
+ADJUST FRONTEND TO ALLOW FOR THIS CUSTOMIZABLE TOO:
+✅ PIL License	story_input["license_terms"]	Custom royalty, remix, and revenue params
+✅ IP Metadata	story_input["ip_metadata_uri"]	NFT + IP metadata bundled
+✅ Co-Creators	story_input["co_creators"]	Off-chain for now, can be used in UI or indexed
 
 RUN EXAMPLE:
 python watch_and_run.py --interval 10

@@ -1,0 +1,29 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "ILicenseTemplate",
+  "sourceName": "contracts/StoryNFT.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "ipAsset",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "terms",
+          "type": "bytes"
+        }
+      ],
+      "name": "attachLicense",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
