@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# hardcoded test
 import os
 import sys
 import traceback
@@ -15,10 +15,10 @@ if not PRIVATE_KEY:
 
 FACTORY_ADDRESS = Web3.to_checksum_address("0xC0933C5440c656464D1Eb1F886422bE3466B1459")
 
-# Tweet data
+# --- TWEET DATA ---
 METADATA_URI        = "ipfs://QmZCb4gGhieBGz8MET2VpeHwfa3hjYJB7WVhJvjpRCpUxT"
-AUTHOR_NAME         = "Fruto de mi tierra"
-AUTHOR_HANDLE       = "chirocuello"
+AUTHOR_NAME         = "Test2"
+AUTHOR_HANDLE       = "Person2"
 TIMESTAMP           = "2025-06-12T09:45:55.000Z"
 VERIFIED            = True
 COMMENTS_COUNT      = 28
@@ -26,76 +26,77 @@ RETWEETS_COUNT      = 101
 LIKES_COUNT         = 686
 ANALYTICS_COUNT     = 0
 TAGS                = ["#SOL"]
-MENTIONS            = ["@insiderssolonly"]
+MENTIONS            = ["@man"]
 PROFILE_IMAGE_URL   = "https://pbs.twimg.com/profile_images/628792948939952129/S18RmD7-_normal.jpg"
-TWEET_LINK          = "https://x.com/chirocuello/status/1933098428428599532"
-TWEET_ID            = "1933098428428599532"
+TWEET_LINK          = "https://x.com/chirocuello/status/1933188647748018349"
+TWEET_ID            = "1933188647748018349"
 IPFS_SCREENSHOT_URL = "https://gateway.pinata.cloud/ipfs/QmZCb4gGhieBGz8MET2VpeHwfa3hjYJB7WVhJvjpRCpUxT"
 
-# Collection params
-MINT_PRICE       = 0
+# --- COLLECTION PARAMETERS ---
+MINT_PRICE       = 0      # in wei
 MAX_SUPPLY       = 1000
-ROYALTY_RECEIVER = None  # set below
-ROYALTY_BPS      = 500
+ROYALTY_RECEIVER = None   # will be set to your address below
+ROYALTY_BPS      = 500    # 5%
 
+# --- FACTORY ABI (only the bits we need) ---
 FACTORY_ABI = [
-    # ... your existing ABI entries ...
     {
-      "inputs":[
-        {"internalType":"string","name":"handle","type":"string"},
-        {"internalType":"uint256","name":"mintPrice","type":"uint256"},
-        {"internalType":"uint256","name":"maxSupply","type":"uint256"},
-        {"internalType":"address","name":"royaltyReceiver","type":"address"},
-        {"internalType":"uint96","name":"royaltyBP","type":"uint96"}
-      ],
-      "name":"createTweetCollection",
-      "outputs":[],
-      "stateMutability":"nonpayable",
-      "type":"function"
+        "inputs": [
+            {"internalType":"string","name":"handle","type":"string"},
+            {"internalType":"uint256","name":"mintPrice","type":"uint256"},
+            {"internalType":"uint256","name":"maxSupply","type":"uint256"},
+            {"internalType":"address","name":"royaltyReceiver","type":"address"},
+            {"internalType":"uint96","name":"royaltyBP","type":"uint96"}
+        ],
+        "name":"createTweetCollection",
+        "outputs":[],
+        "stateMutability":"nonpayable",
+        "type":"function"
     },
     {
-      "inputs":[{"internalType":"uint256","name":"","type":"uint256"}],
-      "name":"allCollections",
-      "outputs":[{"internalType":"address","name":"","type":"address"}],
-      "stateMutability":"view",
-      "type":"function"
+        "inputs":[{"internalType":"uint256","name":"","type":"uint256"}],
+        "name":"allCollections",
+        "outputs":[{"internalType":"address","name":"","type":"address"}],
+        "stateMutability":"view",
+        "type":"function"
     },
     {
-      "inputs":[],
-      "name":"totalCollections",
-      "outputs":[{"internalType":"uint256","name":"","type":"uint256"}],
-      "stateMutability":"view",
-      "type":"function"
+        "inputs":[],
+        "name":"totalCollections",
+        "outputs":[{"internalType":"uint256","name":"","type":"uint256"}],
+        "stateMutability":"view",
+        "type":"function"
     },
     {
-      "inputs":[
-        {"internalType":"address","name":"collection","type":"address"},
-        {"internalType":"address","name":"to","type":"address"},
-        {"internalType":"string","name":"uri","type":"string"},
-        {"internalType":"string","name":"name","type":"string"},
-        {"internalType":"string","name":"handle","type":"string"},
-        {"internalType":"string","name":"timestamp","type":"string"},
-        {"internalType":"bool","name":"verified","type":"bool"},
-        {"internalType":"uint256","name":"comments","type":"uint256"},
-        {"internalType":"uint256","name":"retweets","type":"uint256"},
-        {"internalType":"uint256","name":"likes","type":"uint256"},
-        {"internalType":"uint256","name":"analytics","type":"uint256"},
-        {"internalType":"string[]","name":"tags","type":"string[]"},
-        {"internalType":"string[]","name":"mentions","type":"string[]"},
-        {"internalType":"string","name":"profileImage","type":"string"},
-        {"internalType":"string","name":"tweetLink","type":"string"},
-        {"internalType":"string","name":"tweetId","type":"string"},
-        {"internalType":"string","name":"ipfsScreenshot","type":"string"}
-      ],
-      "name":"registerTweetAsset",
-      "outputs":[],
-      "stateMutability":"nonpayable",
-      "type":"function"
+        "inputs":[
+            {"internalType":"address","name":"collection","type":"address"},
+            {"internalType":"address","name":"to","type":"address"},
+            {"internalType":"string","name":"uri","type":"string"},
+            {"internalType":"string","name":"name","type":"string"},
+            {"internalType":"string","name":"handle","type":"string"},
+            {"internalType":"string","name":"timestamp","type":"string"},
+            {"internalType":"bool","name":"verified","type":"bool"},
+            {"internalType":"uint256","name":"comments","type":"uint256"},
+            {"internalType":"uint256","name":"retweets","type":"uint256"},
+            {"internalType":"uint256","name":"likes","type":"uint256"},
+            {"internalType":"uint256","name":"analytics","type":"uint256"},
+            {"internalType":"string[]","name":"tags","type":"string[]"},
+            {"internalType":"string[]","name":"mentions","type":"string[]"},
+            {"internalType":"string","name":"profileImage","type":"string"},
+            {"internalType":"string","name":"tweetLink","type":"string"},
+            {"internalType":"string","name":"tweetId","type":"string"},
+            {"internalType":"string","name":"ipfsScreenshot","type":"string"}
+        ],
+        "name":"registerTweetAsset",
+        "outputs":[],
+        "stateMutability":"nonpayable",
+        "type":"function"
     }
 ]
 
 def main():
     try:
+        # ── Setup ─────────────────────────────────────────────────────────────
         print("🌐 RPC_URL:", RPC_URL)
         w3 = Web3(Web3.HTTPProvider(RPC_URL))
         print("🔗 web3.isConnected():", w3.is_connected())
@@ -107,25 +108,34 @@ def main():
         ROYALTY_RECEIVER = acct.address
 
         factory = w3.eth.contract(address=FACTORY_ADDRESS, abi=FACTORY_ABI)
-        code = w3.eth.get_code(FACTORY_ADDRESS).hex()
-        print(f"🏭 Factory code @ {FACTORY_ADDRESS} (first 64 chars): {code[:64]}…")
+        code_hex = w3.eth.get_code(FACTORY_ADDRESS).hex()
+        print(f"🏭 Factory code @ {FACTORY_ADDRESS} (first 64 chars): {code_hex[:64]}…")
 
-        # 1️⃣ CREATE
+        # ── 1️⃣ CREATE ────────────────────────────────────────────────────────
         nonce = w3.eth.get_transaction_count(acct.address)
         print("🔢 Starting nonce:", nonce)
-        tx1 = factory.functions.createTweetCollection(
+
+        fn1 = factory.functions.createTweetCollection(
             AUTHOR_HANDLE,
             MINT_PRICE,
             MAX_SUPPLY,
             ROYALTY_RECEIVER,
             ROYALTY_BPS
-        ).build_transaction({
+        )
+        # estimate + 20% buffer
+        estimated_gas1 = fn1.estimate_gas({"from": acct.address})
+        gas_limit1    = int(estimated_gas1 * 1.2)
+        gas_price     = w3.eth.gas_price
+        print(f"   estimated gas1: {estimated_gas1} → gas_limit1: {gas_limit1}, gas_price: {gas_price}")
+
+        tx1 = fn1.build_transaction({
             "from":     acct.address,
             "nonce":    nonce,
-            "gas":      22_200_000,
-            "gasPrice": w3.to_wei("2", "gwei"),
+            "gas":      gas_limit1,
+            "gasPrice": gas_price,
         })
         print("📑 TX1 payload:", tx1)
+
         signed1 = acct.sign_transaction(tx1)
         h1 = w3.eth.send_raw_transaction(signed1.raw_transaction)
         print("⏳ createTweetCollection tx:", h1.hex())
@@ -136,20 +146,19 @@ def main():
         print("   receipt1.gasUsed:", receipt1.gasUsed)
         print("   receipt1.logs:", receipt1.logs)
 
-        # 2️⃣ READ totalCollections
+        # ── 2️⃣ READ totalCollections ─────────────────────────────────────────
         total = factory.functions.totalCollections().call()
         print("🔍 totalCollections:", total)
         if total == 0:
             raise RuntimeError("❌ totalCollections() returned 0 — probably need to add more gas")
 
-        idx = total - 1
-        print("🔢 child index:", idx)
+        idx           = total - 1
         child_address = factory.functions.allCollections(idx).call()
         print("✅ Deployed StoryNFT at:", child_address)
 
-        # 3️⃣ MINT
+        # ── 3️⃣ MINT ──────────────────────────────────────────────────────────
         nonce += 1
-        tx2 = factory.functions.registerTweetAsset(
+        fn2 = factory.functions.registerTweetAsset(
             child_address,
             acct.address,
             METADATA_URI,
@@ -167,13 +176,20 @@ def main():
             TWEET_LINK,
             TWEET_ID,
             IPFS_SCREENSHOT_URL
-        ).build_transaction({
+        )
+        estimated_gas2 = fn2.estimate_gas({"from": acct.address})
+        gas_limit2    = int(estimated_gas2 * 1.2)
+        gas_price     = w3.eth.gas_price
+        print(f"   estimated gas2: {estimated_gas2} → gas_limit2: {gas_limit2}, gas_price: {gas_price}")
+
+        tx2 = fn2.build_transaction({
             "from":     acct.address,
             "nonce":    nonce,
-            "gas":      21_000_000,
-            "gasPrice": w3.to_wei("2", "gwei"),
+            "gas":      gas_limit2,
+            "gasPrice": gas_price,
         })
         print("📑 TX2 payload:", tx2)
+
         signed2 = acct.sign_transaction(tx2)
         h2 = w3.eth.send_raw_transaction(signed2.raw_transaction)
         print("⏳ registerTweetAsset tx:", h2.hex())

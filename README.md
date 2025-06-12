@@ -1,243 +1,162 @@
-# UPDATE TO HANDLE VARIOUS REQUESTS -> CURRENTLY GENERAL SCRAPE, AND FOLLOW USER REQUESTED ACCOUNTS, BUT ALSO SCRAPE SPECIFIC ACCOUNTS TWEETS DEPENDING ON USERS REQUEST? SO MOVE TO CHATBOT LIKE FORMAT?
+TODO:
+Streamline comms between frontend and backend for proper error handling and edge cases not being a black box to users
 
 
-# convrovertial tweet scraper
-
-# Future Enhancements & TODOS
-
-## Improving Consistency of Judgment
-- **Calibrate the System Prompt:**  
-  Refine the agent's prompt to include clear guidelines and examples on what constitutes controversial content.
-- **Chain-of-Thought Reasoning:**  
-  Update the prompt to require a brief reasoning summary (chain-of-thought) before providing the final controversy score.
-- **Memory Integration:**  
-  Utilize persistent memory (e.g., `ConversationBufferMemory`) to store previous analyses for consistent decisions over time.
-- **Consistency Checker Subchain:**  
-  Implement a subchain that cross-checks the deletion likelihood score with additional tools (e.g., sentiment analysis) to validate results.
-
-## Advanced LangGraph Integration
-- **Interactive Visualization:**  
-  Leverage LangGraph's visualization API to create interactive graphs of the agent’s reasoning process.
-- **Graph-Based Workflow:**  
-  Break down the tweet analysis into modular nodes (e.g., content extraction, sentiment evaluation, controversy assessment) and edges that show the data flow.
-- **Utilize Prebuilt Agents:**  
-  Integrate LangGraph prebuilt agents (such as a ReAct agent) for multi-step reasoning and tool usage.
-- **Graph Debugging Hooks:**  
-  Add logging and hooks at key decision points to generate visual summaries of the chain, aiding in debugging and improvement.
-
-## Additional TODOS
-- **Take Screenshot of Tweet:**  
-  *Take a screenshot of the tweet and add it to the output CSV or report for visual reference.*
-- **Pin Controversial Tweets:**  
-  *If the controversy score exceeds 0.5, automatically pin the tweet’s screenshot or content to IPFS and record it on Filecoin.*
+RUN EXAMPLE:
+python watch_and_run.py --interval 10
 
 
-## Setup
 
-1. Install dependencies
+# 🌟 Story Protocol Backend
 
-```bash
-pip install -r requirements.txt
+Welcome to **Story Protocol**, the seamless bridge that transforms any public tweet into a secure, on-chain NFT asset—capturing text, images, video, and beyond. Whether you’re an artist, influencer, or just love storytelling, minting your tweet is now as simple as a deposit and an automated scrape.
+
+---
+
+## 🚀 Why Story Protocol?
+
+- **No-Code Minting**: Anyone can mint a tweet with a single Ether deposit.
+- **End-to-End Automation**: From Twitter scraping to IPFS pinning to on‑chain NFT mint, our backend handles it all.
+- **Future‑Proof**: NFTs are minted on the customizable factory, enabling royalty splits, metadata updates, and unlimited supply controls.
+- **Transparent & Verifiable**: Every action emits events; you can track each mint through the deposit contract.
+
+---
+
+## 🔥 Key Features
+
+1. **Twitter Scraper**  
+   - **Profiles, Queries, Hashtags**: Scrape feeds, searches, or individual tweet URLs.  
+   - **Selenium‑based**: Headless, robust login, dynamic content support.  
+   - **Screenshot to IPFS**: Capture the exact render and pin via Pinata; retrieve via IPFS gateway.
+
+2. **On‑Chain Factory & NFT Minting**  
+   - **Tweet Collection Factory**: Deploy a dedicated NFT collection per Twitter handle.  
+   - **Asset Registration**: Register tweet metadata (text, author, metrics) as NFT attributes.  
+   - **Royalties & Supply**: Configure mint price, max supply, and royalty BPS.
+
+3. **Deposit Watcher**  
+   - **Deposit Contract**: Users deposit exactly 1 ETH with `twitter-verification` validation tag.  
+   - **Event Handler**: Monitors `DepositProcessed`, validates tweet URL, kicks off scraper & mint.  
+   - **Stateful & Retry‑Safe**: Persists last processed block and avoids duplicates.
+
+4. **Register IP Script**  
+   - **CSV or Direct**: Map scraped tweet data into contract calls.  
+   - **Gas‑Efficient**: Estimate and buffer gas, auto‑nonce management, receipt polling.
+
+---
+
+## 🏗 Architecture Overview
+
 ```
-
-## Authentication Options
-
-### Using Environment Variable
-
-1. Rename `.env.example` to `.env`.
-
-2. Open `.env` and update environment variables
-
-```bash
-TWITTER_USERNAME=# Your Twitter Handle (e.g. @username)
-TWITTER_USERNAME=# Your Twitter Username
-TWITTER_PASSWORD=# Your Twitter Password
-```
-
-### Authentication in Terminal
-
-- Add a `username` and `password` to the command line.
-
-```bash
-python scraper --user=@elonmusk --password=password123
-```
-
-### No Authentication Provided
-
-- If you didn't specify a username and password, the program will
-  ask you to enter a username and password.
-
-```bash
-Twitter Username: @username
-Password: password123
++------------+       +-----------------+       +-------------+       +----------------+
+|  Deposit   |  Tx   |  Watch Script   |  CLI  |  Scraper    |  IPFS | Pinata / IPFS  |
+|  Contract  | ----> | (monitor & mint)| ----> | (selenium)  | ----> |  Gateway       |
++------------+       +-----------------+       +-------------+       +----------------+
+                                                           |
+                                                           v
+                                                     +-------------+
+                                                     |  Factory    |
+                                                     |  Contract   |
+                                                     +-------------+
+                                                           |
+                                                           v
+                                                     +-------------+
+                                                     |  NFT Asset  |
+                                                     +-------------+
 ```
 
 ---
 
-**_Authentication Sequence Priority_**
+## 📥 Installation & Setup
+
+1. **Clone repository**  
+   ```bash
+   git clone https://github.com/yourorg/story-backend.git
+   cd story-backend
+   ```
+
+2. **Create & populate `.env`**  
+   ```ini
+   # Twitter
+   TWITTER_MAIL=you@example.com
+   TWITTER_USERNAME=your_handle
+   TWITTER_PASSWORD=your_password
+   HEADLESS=yes
+
+   # Pinata
+   PINATA_API_KEY=...
+   PINATA_API_SECRET=...
+   PINATA_JWT=...
+
+   # Blockchain
+   RPC_URL=https://aeneid.storyrpc.io
+   PRIVATE_KEY=0x...
+   DEPOSIT_CONTRACT=0xAF2A0D1CDAe0...
+   ```
+
+3. **Install dependencies**  
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+---
+
+## ⚙️ Usage
+
+### 1. Manual Scrape & Mint (CLI)
+
+- **Single Tweet**  
+  ```bash
+  python scraper --tweet https://x.com/.../status/1234
+  ```
+  - Automatically scrapes, pins to IPFS, saves backup CSV, and triggers on-chain mint.
+
+- **Profile / Query**  
+  ```bash
+  python scraper --username your_handle -t 10
+  python scraper --query "blockchain" -t 20
+  ```
+
+### 2. Deposit‑Driven Mint (Daemon)
+
+Run the watcher to auto‑detect deposits and mint:
 
 ```bash
-1. Authentication provided in terminal.
-2. Authentication provided in environment variables.
+python watch_deposits.py --interval 15
 ```
 
 ---
 
-## Usage
+## 📜 Smart Contracts
 
-- Show Help
+1. **Deposit Contract**  
+   - `depositIP(recipient, validation, proof, handle, tweetUrl)`  
+   - Emits `DepositProcessed(ipAmount, depositor, recipient, validation, proof, handle, tweet)`.
 
-```bash
-python scraper --help
-```
+2. **Factory Contract**  
+   - `createTweetCollection(string handle, uint256 mintPrice, uint256 maxSupply, address royaltyReceiver, uint96 royaltyBP)`  
+   - `registerTweetAsset(address collection, address to, string uri, string name, string handle, string timestamp, bool verified, uint256 comments, uint256 retweets, uint256 likes, uint256 analytics, string[] tags, string[] mentions, string profileImage, string tweetLink, string tweetId, string ipfsScreenshot)`.
 
-- Basic usage
+3. **NFT Collection**  
+   - ERC‑721 with configurable royalties (EIP‑2981).
 
-```bash
-python scraper
-```
+---
 
-- Setting maximum number of tweets. defaults to `50`.
+## 🎉 Demo & Explorer
 
-```bash
-python scraper --tweets=500   # Scrape 500 Tweets
-```
+- **Mint a tweet**: deposit 1 ETH to the deposit contract with `twitter-verification` tag.
+- **View your NFT**:  
+  `https://aeneid.storyscan.io/token/{COLLECTION_ADDRESS}/instance/{TOKEN_ID}`
 
-- Options and Arguments
+---
 
-```bash
-usage: python scraper [option] ... [arg] ...
+## 🌟 Future Roadmap
 
-authentication options  description
---user                  : Your twitter account Handle.
-                          e.g.
-                          --user=@username
-
---password              : Your twitter account password.
-                          e.g.
-                          --password=password123
-
-options:                description
--t, --tweets            : Number of tweets to scrape (default: 50).
-                          e.g.
-                            -t 500
-                            --tweets=500
-
--u, --username          : Twitter username.
-                          Scrape tweets from a user's profile.
-                          e.g.
-                            -u elonmusk
-                            --username=@elonmusk
-
--ht, --hashtag          : Twitter hashtag.
-                          Scrape tweets from a hashtag.
-                          e.g.
-                            -ht javascript
-                            --hashtag=javascript
-
--q, --query             : Twitter query or search.
-                          Scrape tweets from a query or search.
-                          e.g.
-                            -q "Philippine Marites"
-                            --query="Jak Roberto anti selos"
-
--a, --add               : Additional data to scrape and
-                          save in the .csv file.
-
-                          values:
-                          pd - poster's followers and following
-
-                          e.g.
-                            -a "pd"
-                            --add="pd"
-
-                          NOTE: Values must be separated by commas.
-
---latest                : Twitter latest tweets (default: True).
-                          Note: Only for hashtag-based
-                          and query-based scraping.
-                          usage:
-                            python scraper -t 500 -ht=python --latest
-
---top                   : Twitter top tweets (default: False).
-                          Note: Only for hashtag-based
-                          and query-based scraping.
-                          usage:
-                            python scraper -t 500 -ht=python --top
-
--ntl, --no_tweets_limit : Set no limit to the number of tweets to scrape
-                          (will scrap until no more tweets are available).
-```
-
-### Sample Scraping Commands
-
-- **Custom Limit Scraping**
-
-```bash
-python scraper -t 500
-```
-
-- **User Profile Scraping**
-
-```bash
-python scraper -t 100 -u elonmusk
-```
-
-- **Hashtag Scraping**
-
-  - Latest
-
-    ```bash
-    python scraper -t 100 -ht python --latest
-    ```
-
-  - Top
-
-    ```bash
-    python scraper -t 100 -ht python --top
-    ```
-
-- **Query or Search Scraping**
-  _(Also works with twitter's advanced search.)_
-
-  - Latest
-
-    ```bash
-    python scraper -t 100 -q "Jak Roberto Anti Selos" --latest
-    ```
-
-  - Top
-
-    ```bash
-    python scraper -t 100 -q "International News" --top
-    ```
-
-- **Advanced Search Scraping**
-
-  - For tweets mentioning `@elonmusk`:
-
-    ```bash
-    python scraper --query="(@elonmusk)"
-    ```
-
-  - For tweets that mentions `@elonmusk` with at least `1000` replies from `January 01, 2020 - August 31, 2023`:
-
-    ```bash
-    python scraper --query="(@elonmusk) min_replies:1000 until:2023-08-31 since:2020-01-01"
-    ```
-
-  - Perform more `Advanced Search` using Twitter's Advanced Search, just setup the advanced query and copy the resulting string query to the program:
-  - **[Twitter Advanced Search](https://twitter.com/search-advanced)**
-    [![Image](./img/advanced-search-01.png)](./img/advanced-search-01.png)
-
-- **Scrape Additional Data**
-
-```bash
-python scraper --add="pd"
-```
-
-| Values | Description                                        |
-| :----: | :------------------------------------------------- |
-|   pd   | Tweet poster's id, followers, and following count. |
+- **Video & Media Support**: 
+- **Dashboard**: Real‑time monitoring, analytics, and reclamations.  
+- **Community Tools**: Bulk mint, Twitter giveaways, auction integration.
+- CREATOR INSENTIVES/REWARDS
 
 ---

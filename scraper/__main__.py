@@ -29,7 +29,7 @@ def main():
     parser.add_argument("--password", type=str, default=os.getenv("TWITTER_PASSWORD"), help="Your Twitter password")
     parser.add_argument("--headless", type=str, default=os.getenv("HEADLESS"),         help="[yes/no] run headless")
 
-    # NEW: single‐tweet URL
+    # NEW: single-tweet URL
     parser.add_argument(
         "--tweet",
         type=str,
@@ -79,13 +79,28 @@ def main():
     )
     scraper.login()
 
-    # dispatch
+    # ─── single‐tweet flow ─────────────────────────────────────
     if args.tweet:
-        # scrape a single tweet
-        scraper.scrape_by_url(
+        # scrape a single tweet (returns tweet‐tuple list)
+        records = scraper.scrape_by_url(
             tweet_url=args.tweet,
             max_tweets=1
         )
+
+        # write a quick CSV backup (register_ip.py will read this)
+        out_csv = scraper.save_to_csv()
+        scraper.driver.quit()
+
+        # register on‐chain before doing anything else
+        print("Registering IP asset on-chain…")
+        subprocess.run(
+            [sys.executable, "-m", "scraper.register_ip", "--file", out_csv],
+            check=True
+        )
+        print("✅ On-chain registration complete.")
+        sys.exit(0)
+
+    # ─── profile / query flow ──────────────────────────────────
     elif args.username:
         scraper.scrape_tweets(
             scrape_username=args.username,
@@ -101,18 +116,11 @@ def main():
         print("Please specify --tweet, --username, or --query.")
         sys.exit(1)
 
+    # backup CSV for multi‐tweet runs
     out_csv = scraper.save_to_csv()
     scraper.driver.quit()
-
-    # if we scraped a single URL, register it on-chain
-    if args.tweet:
-        print("Registering IP asset on-chain…")
-        # assume register_ip.py takes `--file path/to.csv`
-        subprocess.run(
-            ["python", "register_ip.py", "--file", out_csv],
-            check=True
-        )
-        print("Done.")
+    print(f"✔ Tweets saved to: {out_csv}")
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

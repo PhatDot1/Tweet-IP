@@ -413,8 +413,9 @@ class Twitter_Scraper:
         record.append(ipfs_url)
         self.data.append(tuple(record))
 
-        self.save_to_csv()
+        
         self.driver.quit()
+        return self.data
         sys.exit(0)
 
     def save_to_csv(self):
@@ -447,6 +448,7 @@ class Twitter_Scraper:
         pd.set_option("display.max_colwidth", None)
         df.to_csv(file_path, index=False, encoding="utf-8")
         print(f"CSV Saved: {file_path}")
+        return file_path
 
     def get_tweets(self):
         return self.data
