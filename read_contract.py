@@ -15,7 +15,7 @@ if not w3.is_connected():
     print(f"❌ Could not connect to RPC at {RPC_URL}", file=sys.stderr)
     sys.exit(1)
 
-CONTRACT_ADDR = Web3.to_checksum_address("0xAF2A0D1CDAe0bae796083e772aF2a1736027BC30")
+CONTRACT_ADDR = Web3.to_checksum_address("0xdC51c42F8E7320D32F542FBB498C5dc48b60D812")
 
 ABI = [
     {

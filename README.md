@@ -178,7 +178,7 @@ python watch_deposits.py --interval 15
 
 ## 🎉 Demo & Explorer
 
-- **Mint a tweet**: deposit 1 ETH to the deposit contract with `twitter-verification` tag.
+- **Mint a tweet**: deposit 1 IP to the deposit contract with `twitter-verification` tag.
 - **View your NFT**:  
   `https://aeneid.storyscan.io/token/{COLLECTION_ADDRESS}/instance/{TOKEN_ID}`
 

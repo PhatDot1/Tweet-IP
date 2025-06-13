@@ -100,7 +100,7 @@ def handle_deposit(evt):
 
     # filters
     if val != "twitter-verification": return
-    if amt != w3.toWei(1, "ether"):   return
+    if amt != w3.to_wei(1, "ether"):   return
     # match handle in URL
     parts = tweet.split("/")
     if len(parts) < 5 or parts[3].lower() != handle.lower():

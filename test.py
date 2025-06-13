@@ -13,7 +13,7 @@ if not PRIVATE_KEY:
     print("🛑 ERROR: Set PRIVATE_KEY in your .env", file=sys.stderr)
     sys.exit(1)
 
-FACTORY_ADDRESS = Web3.to_checksum_address("0xC0933C5440c656464D1Eb1F886422bE3466B1459")
+FACTORY_ADDRESS = Web3.to_checksum_address("0xdC51c42F8E7320D32F542FBB498C5dc48b60D812") # Frontend currently using: 0xdC51c42F8E7320D32F542FBB498C5dc48b60D812, other: 0xC0933C5440c656464D1Eb1F886422bE3466B1459
 
 # --- TWEET DATA ---
 METADATA_URI        = "ipfs://QmZCb4gGhieBGz8MET2VpeHwfa3hjYJB7WVhJvjpRCpUxT"
