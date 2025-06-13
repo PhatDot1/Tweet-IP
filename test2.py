@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+import uuid
 import traceback
 from web3 import Web3
 from dotenv import load_dotenv
@@ -13,8 +15,8 @@ if not PRIVATE_KEY:
     print("🛑 ERROR: Set PRIVATE_KEY in your .env", file=sys.stderr)
     sys.exit(1)
 
-FACTORY_ADDRESS = Web3.to_checksum_address("0x98D6d0b9027Db5f035ab9d608D24896C7812455b")
-LICENSE_HOOK = Web3.to_checksum_address("0x0000000000000000000000000000000000000000")
+FACTORY_ADDRESS = Web3.to_checksum_address("0x24CaCa10deCCBFD4447d585E78dc2a7596CD4833")
+LICENSE_HOOK    = Web3.to_checksum_address("0x0000000000000000000000000000000000000000")
 
 # --- TWEET DATA ---
 METADATA_URI        = "ipfs://QmQRAK6oDejNqCGEQEPwtSQRHw3eL8bkUf93odRnuFAmji"
@@ -29,8 +31,8 @@ ANALYTICS_COUNT     = 0
 TAGS                = ["#SOL"]
 MENTIONS            = ["@man"]
 PROFILE_IMAGE_URL   = "https://pbs.twimg.com/profile_images/628792948939952129/S18RmD7-_normal.jpg"
-TWEET_LINK          = "https://x.com/chirocuello/status/120000000002000034"
-TWEET_ID            = "120000000002000034"
+TWEET_LINK          = "https://x.com/chirocuello/status/1200000000020000345"
+TWEET_ID            = "1200000000020000345"
 IPFS_SCREENSHOT_URL = "https://gateway.pinata.cloud/ipfs/QmQRAK6oDejNqCGEQEPwtSQRHw3eL8bkUf93odRnuFAmji"
 
 # --- COLLECTION PARAMETERS ---
@@ -118,7 +120,7 @@ def main():
         tx1 = fn1.build_transaction({
             "from": acct.address,
             "nonce": nonce,
-            "gas": int(fn1.estimate_gas({"from": acct.address}) * 1.2),
+            "gas": int(fn1.estimate_gas({"from": acct.address}) * 10),  # 🔥 100x gas
             "gasPrice": w3.eth.gas_price,
         })
         signed1 = acct.sign_transaction(tx1)
@@ -129,11 +131,15 @@ def main():
         child_address = factory.functions.allCollections(total - 1).call()
         print("✅ Deployed StoryNFT at:", child_address)
 
-        # 2️⃣ Register IP Asset without PIL
+        # 🕰️ Wait for contract to be recognized/indexed
+        time.sleep(10)
+
+        # 2️⃣ Register IP Asset with Unique Metadata
         print("📡 Registering IP Asset with Story Protocol (no PIL terms)...")
+        unique_id = str(uuid.uuid4())
         metadata = {
-            'ip_metadata_uri': "ipfs://story-protocol-ip-meta-test",
-            'ip_metadata_hash': Web3.to_hex(Web3.keccak(text="story-protocol-ip-meta-test")),
+            'ip_metadata_uri': f"ipfs://story-protocol-ip-meta-test-{unique_id}",
+            'ip_metadata_hash': Web3.to_hex(Web3.keccak(text=f"story-protocol-ip-meta-test-{unique_id}")),
             'nft_metadata_uri': METADATA_URI,
             'nft_metadata_hash': Web3.to_hex(Web3.keccak(text=METADATA_URI))
         }
@@ -187,7 +193,7 @@ def main():
         tx2 = fn2.build_transaction({
             "from": acct.address,
             "nonce": nonce,
-            "gas": int(fn2.estimate_gas({"from": acct.address}) * 1.2),
+            "gas": int(fn2.estimate_gas({"from": acct.address}) * 10),  # 🔥 100x gas
             "gasPrice": w3.eth.gas_price,
         })
         signed2 = acct.sign_transaction(tx2)

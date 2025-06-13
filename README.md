@@ -20,6 +20,15 @@ Then register the IP and attach license terms in the same call
 
 ////////
 
+NOTE:
+ADDING ALL AT ONCE TOO AUDACIOS, FIRST FIX OG CONTRACT TO REGISTER NFT AS IP, NOT CONTRACT
+THEN ITERATIVELY 1 BY 1 ADD AND TEST:
+Co-creators with names + wallets
+Metadata URI [P Metadata]
+Custom license fields [PIL License]
+
+////////
+
 ADJUST FRONTEND TO ALLOW FOR THIS CUSTOMIZABLE TOO:
 ✅ PIL License	story_input["license_terms"]	Custom royalty, remix, and revenue params
 ✅ IP Metadata	story_input["ip_metadata_uri"]	NFT + IP metadata bundled
