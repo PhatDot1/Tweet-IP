@@ -1,0 +1,35 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IExternalRoyaltyPolicyBase",
+  "sourceName": "contracts/interfaces/modules/royalty/policies/IExternalRoyaltyPolicyBase.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "ipId",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "licensePercent",
+          "type": "uint32"
+        }
+      ],
+      "name": "getPolicyRtsRequiredToLink",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

@@ -1,3 +1,19 @@
+PythonSDK issues:
+IPAsset.register raw response: {'tx_hash': None, 'ip_id': '0xC323fe0C32133621630B709BEFD8D769696Cd537'}
+No TXhash making it difficult to create & attatch license terms. So using TS SDK for this.
+
+Bare Factory:
+
+
+Factory With ^ + Basic IP and Story Metadata + Bugfix on NFT IP registration:
+0x17C35b9175B42e19e4f8793Aeab28D255d1c6192
+
+Factory With ^ + License terms and Optional Derivatives Added:
+0x8a1885132A04fe94850BEc4f47C55Ca466C7Bb81
+
+Factory With ^ + RoyaltyModule and ModuleRegistry:
+
+
 TODO:
 Streamline comms between frontend and backend for proper error handling and edge cases not being a black box to users
 

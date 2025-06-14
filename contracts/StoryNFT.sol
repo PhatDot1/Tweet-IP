@@ -1,8 +1,5 @@
-// StoryNFT.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
-
-// registers the contract address (StoryNFT) as an IP asset, not the individual token ID
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
@@ -11,6 +8,14 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+
+import { IIPAssetRegistry }   from "./interfaces/registries/IIPAssetRegistry.sol";
+import { ILicenseRegistry }    from "./interfaces/registries/ILicenseRegistry.sol";
+import { ILicensingModule }    from "./interfaces/modules/licensing/ILicensingModule.sol";
+import { IPILicenseTemplate }  from "./interfaces/modules/licensing/IPILicenseTemplate.sol";
+import { PILFlavors }          from "./lib/PILFlavors.sol";
+import { ICoreMetadataModule } from "./interfaces/modules/metadata/ICoreMetadataModule.sol";
 
 contract StoryNFT is
     ERC721,
@@ -18,47 +23,86 @@ contract StoryNFT is
     ERC721URIStorage,
     Pausable,
     Ownable,
-    ERC2981
+    ERC2981,
+    ERC721Holder
 {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdCounter;
 
-    /// @notice Mint price (in wei), adjustable by owner
-    uint256 public mintPrice;
-
-    /// @notice Maximum NFTs in this collection
-    uint256 public maxSupply;
-
-    /// @notice Which addresses may mint
-    mapping(address => bool) public minters;
-
-    /// @notice Prevent double-minting the same tweet
-    mapping(string => bool) public mintedTweet;
-
-    struct TweetMeta {
-        string   name;
-        string   handle;
-        string   timestamp;
-        bool     verified;
-        uint256  comments;
-        uint256  retweets;
-        uint256  likes;
-        uint256  analytics;
+    /// @notice Tweet metadata structure
+    struct TweetMetadata {
+        string name;
+        string handle;
+        string timestamp;
+        bool verified;
+        uint256 comments;
+        uint256 retweets;
+        uint256 likes;
+        uint256 analytics;
         string[] tags;
         string[] mentions;
-        string   profileImage;
-        string   tweetLink;
-        string   tweetId;
-        string   ipfsScreenshot;
+        string profileImage;
+        string tweetLink;
+        string tweetId;
+        string ipfsScreenshot;
     }
 
-    /// @notice On-chain storage of all tweet fields
-    mapping(uint256 => TweetMeta) public tweetMeta;
+    /// @notice Mint price (in wei)
+    uint256 public mintPrice;
+    /// @notice Cap on total mints
+    uint256 public maxSupply;
+    /// @notice Allowed minters
+    mapping(address => bool) public minters;
+    /// @notice Prevent double-minting the same tweet
+    mapping(string => bool) public mintedTweet;
+    /// @notice Store tweet metadata for each token
+    mapping(uint256 => TweetMetadata) public tweetMetadata;
+
+    /// Story Protocol core modules
+    IIPAssetRegistry    public immutable IP_ASSET_REGISTRY;
+    ICoreMetadataModule public immutable METADATA_MODULE;
+    ILicenseRegistry    public immutable LICENSE_REGISTRY;
+    ILicensingModule    public immutable LICENSING_MODULE;
+    IPILicenseTemplate  public immutable PIL_TEMPLATE;
+
+    /// @notice royalty policy & currency for PIL terms
+    address public immutable ROYALTY_POLICY_LAP;
+    address public immutable CURRENCY_TOKEN;
 
     event TweetRegistered(
         uint256 indexed tokenId,
-        string  indexed tweetId,
-        address indexed owner
+        string indexed tweetId,
+        address indexed owner,
+        address           ipId
+    );
+    
+    event TweetMinted(
+        uint256 indexed tokenId,
+        string indexed tweetId,
+        string name,
+        string handle,
+        string timestamp,
+        bool verified,
+        uint256 comments,
+        uint256 retweets,
+        uint256 likes,
+        uint256 analytics,
+        string[] tags,
+        string[] mentions,
+        string profileImage,
+        string tweetLink,
+        string ipfsScreenshot
+    );
+    
+    event TermsCreatedAndAttached(
+        uint256 indexed tokenId,
+        address indexed ipId,
+        uint256 indexed licenseTermsId
+    );
+    event DerivativeRegistered(
+        uint256 indexed tokenId,
+        address indexed ipId,
+        uint256 indexed licenseTokenId
     );
 
     modifier onlyMinter() {
@@ -72,145 +116,236 @@ contract StoryNFT is
         uint256       mintPrice_,
         uint256       maxSupply_,
         address       royaltyReceiver_,
-        uint96        royaltyBP_
+        uint96        royaltyBP_,
+        // Story Protocol core
+        address       ipAssetRegistry_,
+        address       metadataModule_,
+        address       licenseRegistry_,
+        address       licensingModule_,
+        address       pilTemplate_,
+        address       royaltyPolicyLAP_,
+        address       currencyToken_
     ) ERC721(name_, symbol_) {
-        mintPrice = mintPrice_;
-        maxSupply = maxSupply_;
+        mintPrice        = mintPrice_;
+        maxSupply        = maxSupply_;
         _setDefaultRoyalty(royaltyReceiver_, royaltyBP_);
+
+        IP_ASSET_REGISTRY    = IIPAssetRegistry(ipAssetRegistry_);
+        METADATA_MODULE      = ICoreMetadataModule(metadataModule_);
+        LICENSE_REGISTRY     = ILicenseRegistry(licenseRegistry_);
+        LICENSING_MODULE     = ILicensingModule(licensingModule_);
+        PIL_TEMPLATE         = IPILicenseTemplate(pilTemplate_);
+        ROYALTY_POLICY_LAP   = royaltyPolicyLAP_;
+        CURRENCY_TOKEN       = currencyToken_;
+
         minters[_msgSender()] = true;
     }
 
-    /// @notice Owner can change mint price
-    function setMintPrice(uint256 newPrice) external onlyOwner {
-        mintPrice = newPrice;
+    /// @notice Grant or revoke mint rights
+    function setMinter(address who, bool allowed) external onlyOwner {
+        minters[who] = allowed;
     }
 
-    /// @notice Owner may add or remove other minters
-    function setMinter(address minter, bool allowed) public onlyOwner {
-        minters[minter] = allowed;
+    function setMintPrice(uint256 p) external onlyOwner {
+        mintPrice = p;
     }
 
-    /// @notice Pause all new mints (emergency)
-    function pause() external onlyOwner {
-        _pause();
+    function pause()   external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
+
+    /// @notice Get tweet metadata for a token
+    function getTweetMetadata(uint256 tokenId) external view returns (TweetMetadata memory) {
+        return tweetMetadata[tokenId];
     }
 
-    /// @notice Unpause
-    function unpause() external onlyOwner {
-        _unpause();
-    }
-
-    /// @notice Mint a single token *and* store all tweet metadata on-chain
+    /// @notice Mint a Tweet NFT, store metadata, register as IP Asset
     function safeMint(
         address        to,
         string calldata uri,
         string calldata name_,
-        string calldata handle,
-        string calldata timestamp,
-        bool           verified,
-        uint256        comments,
-        uint256        retweets,
-        uint256        likes,
-        uint256        analytics,
-        string[] calldata tags,
-        string[] calldata mentions,
-        string calldata profileImage,
-        string calldata tweetLink,
-        string calldata tweetId,
-        string calldata ipfsScreenshot
-    )
-        external
-        onlyMinter
-        whenNotPaused
-    {
-        require(_tokenIdCounter.current() < maxSupply, "Exceeds max supply");
-        require(!mintedTweet[tweetId], "Tweet already registered");
+        string calldata handle_,
+        string calldata timestamp_,
+        bool           verified_,
+        uint256        comments_,
+        uint256        retweets_,
+        uint256        likes_,
+        uint256        analytics_,
+        string[] calldata tags_,
+        string[] calldata mentions_,
+        string calldata profileImage_,
+        string calldata tweetLink_,
+        string calldata tweetId_,
+        string calldata ipfsScreenshot_
+    ) external onlyMinter whenNotPaused {
+        require(_tokenIdCounter.current() < maxSupply, "Max supply reached");
+        require(!mintedTweet[tweetId_],      "Tweet already used");
 
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
-        mintedTweet[tweetId] = true;
+        mintedTweet[tweetId_] = true;
 
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
 
-        tweetMeta[tokenId] = TweetMeta({
-            name:           name_,
-            handle:         handle,
-            timestamp:      timestamp,
-            verified:       verified,
-            comments:       comments,
-            retweets:       retweets,
-            likes:          likes,
-            analytics:      analytics,
-            tags:           tags,
-            mentions:       mentions,
-            profileImage:   profileImage,
-            tweetLink:      tweetLink,
-            tweetId:        tweetId,
-            ipfsScreenshot: ipfsScreenshot
+        // Store tweet metadata
+        tweetMetadata[tokenId] = TweetMetadata({
+            name: name_,
+            handle: handle_,
+            timestamp: timestamp_,
+            verified: verified_,
+            comments: comments_,
+            retweets: retweets_,
+            likes: likes_,
+            analytics: analytics_,
+            tags: tags_,
+            mentions: mentions_,
+            profileImage: profileImage_,
+            tweetLink: tweetLink_,
+            tweetId: tweetId_,
+            ipfsScreenshot: ipfsScreenshot_
         });
 
-        emit TweetRegistered(tokenId, tweetId, to);
+        // Register on Story IP registry
+        address ipId = IP_ASSET_REGISTRY.register(
+            block.chainid,
+            address(this),
+            tokenId
+        );
+
+        // Optionally register metadata on the off-chain indexing module
+        // METADATA_MODULE.setAll(ipId, uri /* or another URI */, bytes32(0), bytes32(0));
+
+        emit TweetRegistered(tokenId, tweetId_, to, ipId);
+        emit TweetMinted(
+            tokenId,
+            tweetId_,
+            name_,
+            handle_,
+            timestamp_,
+            verified_,
+            comments_,
+            retweets_,
+            likes_,
+            analytics_,
+            tags_,
+            mentions_,
+            profileImage_,
+            tweetLink_,
+            ipfsScreenshot_
+        );
     }
 
-    /// @notice (Optional) batch mint of identical URIs
-    function mint(address to, uint256 quantity, string memory uri)
-        public
-        payable
-        onlyMinter
-        whenNotPaused
+    /// @notice Mint + register + create & attach PIL terms in one go
+    function mintAndRegisterAndCreateTermsAndAttach(address receiver)
+        external
+        returns (uint256 tokenId, address ipId, uint256 licenseTermsId)
     {
-        require(quantity > 0, "Quantity must be > 0");
-        require(_tokenIdCounter.current() + quantity <= maxSupply, "Exceeds max supply");
-        require(msg.value >= mintPrice * quantity, "Insufficient ETH sent");
-        for (uint256 i = 0; i < quantity; i++) {
-            uint256 tokenId = _tokenIdCounter.current();
-            _tokenIdCounter.increment();
-            _safeMint(to, tokenId);
-            _setTokenURI(tokenId, uri);
-        }
+        // mint to self (so we can call attach)
+        tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(address(this), tokenId);
+
+        // register as IP asset
+        ipId = IP_ASSET_REGISTRY.register(block.chainid, address(this), tokenId);
+
+        // create a new PIL license template (commercial remix flavor)
+        licenseTermsId = PIL_TEMPLATE.registerLicenseTerms(
+            PILFlavors.commercialRemix({
+                mintingFee:         0,
+                commercialRevShare: 20 * 10**6, // 20%
+                royaltyPolicy:      ROYALTY_POLICY_LAP,
+                currencyToken:      CURRENCY_TOKEN
+            })
+        );
+
+        // attach to the IP asset
+        LICENSING_MODULE.attachLicenseTerms(ipId, address(PIL_TEMPLATE), licenseTermsId);
+
+        // transfer NFT ownership to receiver
+        _transfer(address(this), receiver, tokenId);
+
+        emit TermsCreatedAndAttached(tokenId, ipId, licenseTermsId);
     }
 
-    /// @notice Withdraw accumulated ETH
-    function withdraw() public onlyOwner {
-        uint256 balance = address(this).balance;
-        require(balance > 0, "No funds to withdraw");
-        payable(owner()).transfer(balance);
+
+    /// @notice Mint and register a derivative using license tokens
+    function mintLicenseTokenAndRegisterDerivative(
+        address parentIpId,
+        uint256 licenseTermsId,
+        address receiver
+    )
+        external
+        returns (
+            uint256 childTokenId,
+            address childIpId,
+            uint256 licenseTokenId
+        )
+    {
+        // 1) Mint the child NFT to this contract
+        childTokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(address(this), childTokenId);
+
+        // 2) Register the child as an IP Asset
+        childIpId = IP_ASSET_REGISTRY.register(
+            block.chainid,
+            address(this),
+            childTokenId
+        );
+
+        // 3) Mint exactly one license token from the parent IP
+        licenseTokenId = LICENSING_MODULE.mintLicenseTokens({
+            licensorIpId:    parentIpId,
+            licenseTemplate: address(PIL_TEMPLATE),
+            licenseTermsId:  licenseTermsId,
+            amount:          1,
+            receiver:        address(this),
+            royaltyContext:  "",
+            maxMintingFee:   0,
+            maxRevenueShare: 0
+        });
+
+        // 4) Create and populate array with the license token ID
+        uint256[] memory licenseTokenIds = new uint256[](1);
+        licenseTokenIds[0] = licenseTokenId;
+
+        // 5) Link the child IP as a derivative
+        LICENSING_MODULE.registerDerivativeWithLicenseTokens({
+            childIpId:       childIpId,
+            licenseTokenIds: licenseTokenIds,
+            royaltyContext:  "",
+            maxRts:          0
+        });
+
+        // 6) Transfer the child NFT to the final owner
+        _transfer(address(this), receiver, childTokenId);
+
+        emit DerivativeRegistered(childTokenId, childIpId, licenseTokenId);
     }
 
-    receive() external payable {}
-    fallback() external payable {}
 
     // ──────────────────────────────────────────────────────────────────────
-    // Overrides for multiple inheritance
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
-        internal
-        override(ERC721, ERC721Enumerable)
-    {
-        super._beforeTokenTransfer(from, to, tokenId);
-        require(!paused(), "StoryNFT: paused");
-    }
+    // OpenZeppelin overrides
 
-    function _burn(uint256 tokenId)
-        internal
-        override(ERC721, ERC721URIStorage)
+    function _beforeTokenTransfer(address from, address to, uint256 id)
+        internal override(ERC721, ERC721Enumerable)
     {
-        super._burn(tokenId);
+        super._beforeTokenTransfer(from, to, id);
+        require(!paused(), "Paused");
     }
-
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
+    function _burn(uint256 id)
+        internal override(ERC721, ERC721URIStorage)
+    {
+        super._burn(id);
+    }
+    function tokenURI(uint256 id)
+        public view override(ERC721, ERC721URIStorage)
         returns (string memory)
     {
-        return super.tokenURI(tokenId);
+        return super.tokenURI(id);
     }
-
     function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, ERC721Enumerable, ERC2981)
+        public view override(ERC721, ERC721Enumerable, ERC2981)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

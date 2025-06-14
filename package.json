@@ -1,0 +1,36 @@
+{
+  "name": "story-twitter-ip",
+  "version": "1.0.0",
+  "description": "PythonSDK issues: IPAsset.register raw response: {'tx_hash': None, 'ip_id': '0xC323fe0C32133621630B709BEFD8D769696Cd537'} No TXhash making it difficult to create & attatch license terms. So using TS SDK for this.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PhatDot1/Tweet-IP.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PhatDot1/Tweet-IP/issues"
+  },
+  "homepage": "https://github.com/PhatDot1/Tweet-IP#readme",
+  "dependencies": {
+    "@openzeppelin/contracts": "4.7.3",
+    "@story-protocol/core-sdk": "^1.3.2",
+    "dotenv": "^16.5.0",
+    "ethers": "^6.14.4",
+    "viem": "^2.31.3"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.9",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "hardhat": "^2.24.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
