@@ -2321,6 +2321,43 @@
       "artifacts": [
         "IERC20"
       ]
+    },
+    "/Users/ppwoork/Story-Twitter-IP/contracts/StoryDeposit.sol": {
+      "lastModificationDate": 1750272980226,
+      "contentHash": "ac3809e571be349975573dbf5a2296ac",
+      "sourceName": "contracts/StoryDeposit.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IP_Deposit"
+      ]
     }
   }
 }

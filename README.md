@@ -1,3 +1,139 @@
+Need Deposit To Specify:
+Security Params Plus:
+    "@alice",        // handle
+    0,               // mintPrice
+    9000,              // maxSupply
+    signer.address,  // royaltyReceiver [should be set to current owner?]
+    500              // royaltyBP (5%) [prob 100%??? Since means sale??]
+
+    "ipfs://QmDummyUri", // metadata
+    "Alice Example", // Asset Name
+    "@alice", // handle
+    new Date().toISOString(), 
+    false,
+    0, 0, 0, 0,
+    ["#test"],
+    ["@bob886"], // have this increment @name_{num} +1 each time.
+    "https://example.com/avatar.jpg",
+    "https://twitter.com/alice/status/886", // must be unqiue tweet enforced
+    "886", // must be unqiue
+    "ipfs://QmDummyScreenshot"
+
+    const licenseResponse = await storyClient.license.registerPILTerms({
+      defaultMintingFee: 0n,
+      currency: '0x1514000000000000000000000000000000000000', // $WIP token
+      royaltyPolicy: '0xBe54FB168b3c982b7AaE60dB6CF75Bd8447b390E', // RoyaltyPolicyLAP
+      transferable: true,
+      expiration: 0n,
+      commercialUse: true,
+      commercialAttribution: true,
+      commercializerChecker: '0x0000000000000000000000000000000000000000',
+      commercializerCheckerData: '0x',
+      commercialRevShare: 20, // 20% revenue share
+      commercialRevCeiling: 0n,
+      derivativesAllowed: true,
+      derivativesAttribution: true,
+      derivativesApproval: false,
+      derivativesReciprocal: true,
+      derivativeRevCeiling: 0n,
+      uri: '',
+      // Fixed: Remove waitForTransaction from txOptions
+      txOptions: {}
+
+      licenseTermsId: "1", // This should be the actual license terms ID from the previous step
+      licensorIpId: ipAssetId as Address,
+      receiver: account.address,
+      amount: 1,
+      maxMintingFee: BigInt(0),
+      maxRevenueShare: 100,
+      // Fixed: Remove waitForTransaction from txOptions
+      txOptions: {}
+
+  tl;dr:
+1.  Collection creation (if you’re also deploying a new one) [user data]
+handle (string) – e.g. "@alice"
+
+mintPrice (number or BigNumber) – wei price to mint
+
+maxSupply (number) – cap on total mints
+
+royaltyReceiver (address) – who gets on-chain royalties
+
+royaltyBP (number) – basis-points (500 = 5%)
+
+2. Minting & registering the tweet [data from the tweet]
+recipient (address) – who the NFT is minted to
+
+uri (string) – your token’s metadata URI (e.g. an IPFS link)
+
+name_ (string) – tweet author’s display name
+
+handle_ (string) – tweet author’s handle
+
+timestamp_ (string) – when the tweet was posted (ISO)
+
+verified_ (boolean) – whether the author is verified
+
+comments_, retweets_, likes_, analytics_ (numbers) – on-chain stats
+
+tags_ (string[]) – array of hashtags
+
+mentions_ (string[]) – array of @-mentions
+
+profileImage_ (string) – avatar URL
+
+tweetLink_ (string) – link to the original tweet
+
+tweetId_ (string) – the tweet’s unique ID
+
+ipfsScreenshot_ (string) – URI of a screenshot
+
+3. IP-registration metadata (if you want to customize) [data from the tweet]
+ipMetadataURI, ipMetadataHash
+
+nftMetadataURI, nftMetadataHash
+
+(these are currently blank in your script but can be set if you have off-chain metadata)
+
+4. License-terms setup [user defined data]
+defaultMintingFee (BigInt)
+
+currency (address) – e.g. your token used for fees
+
+royaltyPolicy (address) – on-chain royalty policy module
+
+transferable (boolean)
+
+expiration (BigInt)
+
+commercialUse, commercialAttribution (booleans)
+
+commercialRevShare (number)
+
+commercialRevCeiling (BigInt)
+
+derivativesAllowed, derivativesAttribution, derivativesApproval, derivativesReciprocal (booleans)
+
+derivativeRevCeiling (BigInt)
+
+uri (string) – optional pointer to human-readable license text
+
+5. License-token minting [user defined data]
+licenseTermsId (string or number) – from the previous step
+
+licensorIpId (address) – the IP asset you just registered
+
+receiver (address) – who gets the license token
+
+amount (number) – how many tokens to mint
+
+maxMintingFee (BigInt)
+
+maxRevenueShare (number)
+
+
+
+
 PythonSDK issues:
 IPAsset.register raw response: {'tx_hash': None, 'ip_id': '0xC323fe0C32133621630B709BEFD8D769696Cd537'}
 No TXhash making it difficult to create & attatch license terms. So using TS SDK for this.

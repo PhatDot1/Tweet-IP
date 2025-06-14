@@ -91,7 +91,9 @@ def main():
         out_csv = scraper.save_to_csv()
         scraper.driver.quit()
 
-        # register on‐chain before doing anything else
+        # OUTDATED: register on‐chain before doing anything else
+        '''
+
         print("Registering IP asset on-chain…")
         subprocess.run(
             [sys.executable, "-m", "scraper.register_ip", "--file", out_csv],
@@ -99,6 +101,8 @@ def main():
         )
         print("✅ On-chain registration complete.")
         sys.exit(0)
+        '''
+
 
     # ─── profile / query flow ──────────────────────────────────
     elif args.username:

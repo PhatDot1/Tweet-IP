@@ -22,10 +22,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC2981__factory>;
     getContractFactory(
-      name: "IERC4906",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IERC4906__factory>;
-    getContractFactory(
       name: "Pausable",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Pausable__factory>;
@@ -226,6 +222,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.PILFlavors__factory>;
     getContractFactory(
+      name: "IP_Deposit",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IP_Deposit__factory>;
+    getContractFactory(
       name: "StoryNFT",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.StoryNFT__factory>;
@@ -245,11 +245,6 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IERC2981>;
     getContractAt(
-      name: "IERC4906",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IERC4906>;
-    getContractAt(
       name: "Pausable",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -499,6 +494,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.PILFlavors>;
+    getContractAt(
+      name: "IP_Deposit",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IP_Deposit>;
     getContractAt(
       name: "StoryNFT",
       address: string | ethers.Addressable,
@@ -519,10 +519,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC2981>;
     deployContract(
-      name: "IERC4906",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC4906>;
-    deployContract(
       name: "Pausable",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Pausable>;
@@ -722,6 +718,10 @@ declare module "hardhat/types/runtime" {
       name: "PILFlavors",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.PILFlavors>;
+    deployContract(
+      name: "IP_Deposit",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IP_Deposit>;
     deployContract(
       name: "StoryNFT",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -742,11 +742,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC2981>;
     deployContract(
-      name: "IERC4906",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC4906>;
-    deployContract(
       name: "Pausable",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -996,6 +991,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.PILFlavors>;
+    deployContract(
+      name: "IP_Deposit",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IP_Deposit>;
     deployContract(
       name: "StoryNFT",
       args: any[],

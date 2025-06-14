@@ -1,4 +1,4 @@
-# register_ip.py
+# OUTDATED AND REMOVED
 import os
 import sys
 import glob

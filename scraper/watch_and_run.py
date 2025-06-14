@@ -1,70 +1,63 @@
-import os, sys, json, time, argparse, logging, subprocess
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import time
+import csv
+import argparse
+import logging
+import subprocess
+
+import urllib3
 from web3 import Web3
 from dotenv import load_dotenv
 
-load_dotenv()
+# ------------------------
+# Silence internal DEBUG
+# ------------------------
+logging.getLogger("web3").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.WARNING)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-RPC_URL     = os.getenv("RPC_URL", "https://aeneid.storyrpc.io")
-PRIVATE_KEY = os.getenv("PRIVATE_KEY")
-CONTRACT_ADDRESS = Web3.to_checksum_address(
-    os.getenv("DEPOSIT_CONTRACT", "0xAF2A0D1CDAe0bae796083e772aF2a1736027BC30")
+# ------------------------
+# Configure our logger
+# ------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
 )
 
-ABI = [
-  {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
-  {"anonymous":False,"inputs":[
-      {"indexed":True,"internalType":"uint256","name":"ipAmount","type":"uint256"},
-      {"indexed":True,"internalType":"address","name":"depositor","type":"address"},
-      {"indexed":True,"internalType":"address","name":"recipient","type":"address"},
-      {"indexed":False,"internalType":"string","name":"validation","type":"string"},
-      {"indexed":False,"internalType":"bytes","name":"proof","type":"bytes"},
-      {"indexed":False,"internalType":"string","name":"handle","type":"string"},
-      {"indexed":False,"internalType":"string","name":"tweet","type":"string"}
-    ],
-    "name":"DepositProcessed","type":"event"
-  },
-  {"anonymous":False,"inputs":[
-      {"indexed":True,"internalType":"bytes32","name":"txHash","type":"bytes32"},
-      {"indexed":False,"internalType":"string","name":"newValidation","type":"string"}
-    ],
-    "name":"ValidationUpdated","type":"event"
-  },
-  {"inputs":[
-      {"internalType":"address","name":"recipient","type":"address"},
-      {"internalType":"string","name":"validation","type":"string"},
-      {"internalType":"bytes","name":"proof","type":"bytes"},
-      {"internalType":"string","name":"handle","type":"string"},
-      {"internalType":"string","name":"tweet","type":"string"}
-    ],
-    "name":"depositIP","outputs":[],"stateMutability":"payable","type":"function"
-  },
-  {"inputs":[{"internalType":"bytes32","name":"txHash","type":"bytes32"},
-             {"internalType":"string","name":"newValidation","type":"string"}],
-    "name":"updateValidation","outputs":[],"stateMutability":"nonpayable","type":"function"
-  },
-  {"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],
-    "name":"validationFor","outputs":[{"internalType":"string","name":"","type":"string"}],
-    "stateMutability":"view","type":"function"
-  },
-  {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],
-    "stateMutability":"view","type":"function"
-  },
-  {"inputs":[],"name":"withdrawFunds","outputs":[],"stateMutability":"nonpayable","type":"function"},
-  {"stateMutability":"payable","type":"receive"}
-]
+# ----------------------------------------------------------------------------
+# CONFIG & SETUP
+# ----------------------------------------------------------------------------
+load_dotenv()
 
-STATE_FILE    = "state.json"
-POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "15"))
+RPC_URL          = os.getenv("RPC_URL", "https://aeneid.storyrpc.io")
+PRIVATE_KEY      = os.getenv("PRIVATE_KEY")
+DEPOSIT_ADDRESS  = os.getenv("DEPOSIT_CONTRACT",    "0x03D95676b52E5b1D65345D6fbAA5CC9319297026")
+CONTRACT_ADDRESS = Web3.to_checksum_address(DEPOSIT_ADDRESS)
+STATE_FILE       = "state.json"
+POLL_INTERVAL    = int(os.getenv("POLL_INTERVAL", "15"))
 
 if not PRIVATE_KEY:
-    print("🛑 ERROR: Set PRIVATE_KEY in your .env", file=sys.stderr)
+    logging.error("🛑 ERROR: Set PRIVATE_KEY in your .env")
     sys.exit(1)
 
-w3 = Web3(Web3.HTTPProvider(RPC_URL))
-acct = w3.eth.account.from_key(PRIVATE_KEY)
+# Load ABI
+try:
+    with open("IP_Deposit.json", "r") as f:
+        ABI = json.load(f)["abi"]
+except Exception as e:
+    logging.error(f"🛑 ERROR: Unable to load ABI: {e}")
+    sys.exit(1)
+
+# Web3 & contract
+w3       = Web3(Web3.HTTPProvider(RPC_URL))
+acct     = w3.eth.account.from_key(PRIVATE_KEY)
 contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=ABI)
 
-# load or initialize state
+# State
 if os.path.exists(STATE_FILE):
     state = json.load(open(STATE_FILE))
 else:
@@ -74,73 +67,268 @@ def save_state():
     with open(STATE_FILE, "w") as f:
         json.dump(state, f, indent=2)
 
-def send_update(tx_hash_hex: str, new_status: str):
-    tx_bytes = w3.toBytes(hexstr=tx_hash_hex)
-    fn = contract.functions.updateValidation(tx_bytes, new_status)
+# ----------------------------------------------------------------------------
+# Helpers
+# ----------------------------------------------------------------------------
+def send_update(tweet_hash: bytes, new_status: str):
+    logging.info(f"   ➡ Sending updateValidation({tweet_hash.hex()}, {new_status})")
+    fn    = contract.functions.updateValidation(tweet_hash, new_status)
     nonce = w3.eth.get_transaction_count(acct.address)
-    tx = fn.build_transaction({
-        "from":     acct.address,
-        "nonce":    nonce,
-        "gas":      int(fn.estimate_gas({"from": acct.address}) * 1.2),
+    tx    = fn.build_transaction({
+        "from": acct.address,
+        "nonce": nonce,
+        "gas": int(fn.estimate_gas({"from": acct.address}) * 1.2),
         "gasPrice": w3.eth.gas_price,
     })
     signed = acct.sign_transaction(tx)
     return w3.eth.send_raw_transaction(signed.raw_transaction)
 
+# ----------------------------------------------------------------------------
+# Main pipeline handler
+# ----------------------------------------------------------------------------
 def handle_deposit(evt):
-    args     = evt["args"]
-    tx_hash  = evt["transactionHash"].hex()
+    args    = evt["args"]
+    tx_hash = evt["transactionHash"].hex()
+
+    # 1) Log event details
+    logging.info("🔍 Processing DepositProcessed event:")
+    logging.info(f"   • TX hash:            {tx_hash}")
+    logging.info(f"   • Block:              {evt['blockNumber']}")
+    logging.info(f"   • ipAmount:           {w3.from_wei(args['ipAmount'], 'ether')} ETH")
+    logging.info(f"   • validation:         {args['validation']!r}")
+    logging.info(f"   • proof (raw bytes):  {args['proof'].hex() or '<empty>'}")
+    logging.info(f"   • collectionAddress:  {args['collectionAddress']}")
+    logging.info(f"   • collectionConfig:   {args['collectionConfig']}")
+    logging.info(f"   • tweetHash (key):    {args['tweetHash'].hex()}")
+    logging.info(f"   • licenseTermsConfig: {args['licenseTermsConfig']}")
+    logging.info(f"   • licenseMintParams:  {args['licenseMintParams']}")
+    logging.info(f"   • coCreators (event): {args['coCreators']}")
+
+    # Dedupe & filter
     if tx_hash in state["seen"]:
+        logging.info("   ❗ Already seen, skipping")
+        return
+    if args["validation"] != "twitter-verification" or args["ipAmount"] != w3.to_wei(1, "ether"):
+        logging.info("   ❌ Skipping: must be twitter-verification + 1 ETH")
         return
 
-    amt    = args["ipAmount"]
-    val    = args["validation"]
-    handle = args["handle"]
-    tweet  = args["tweet"]
-
-    # filters
-    if val != "twitter-verification": return
-    if amt != w3.to_wei(1, "ether"):   return
-    # match handle in URL
-    parts = tweet.split("/")
-    if len(parts) < 5 or parts[3].lower() != handle.lower():
-        return
-
-    logging.info(f"➡️  New deposit {tx_hash} → minting…")
-    # 1) pending-mint
-    h1 = send_update(tx_hash, "pending-mint")
+    # 2) Mark pending-mint
+    logging.info("➡ Pipeline start → marking pending-mint")
+    h1 = send_update(args["tweetHash"], "pending-mint")
     w3.eth.wait_for_transaction_receipt(h1)
-    logging.info(f"   pending-mint tx: {h1.hex()}")
 
-    # 2) scraper
-    subprocess.run(["python", "scraper", f"--tweet={tweet}"], check=True)
+    # 3) Fetch on-chain record
+    th = args["tweetHash"]
+    logging.info(f"   • Calling getByTweetHash({th.hex()})")
+    record = contract.functions.getByTweetHash(th).call()
+    (
+      depositor,
+      recipient,
+      validation,
+      proof_bytes,
+      collectionAddress,
+      collectionConfig,
+      tweetHashOut,
+      licenseTermsConfig,
+      licenseMintParams,
+      coCreators
+    ) = record
 
-    # 3) mint-verified
-    h2 = send_update(tx_hash, "mint-verified")
+    logging.info(f"   • record.depositor:           {depositor}")
+    logging.info(f"   • record.recipient:           {recipient}")
+    logging.info(f"   • record.validation:          {validation!r}")
+    logging.info(f"   • record.proof (hex):         {proof_bytes.hex() or '<empty>'}")
+    logging.info(f"   • record.collectionAddress:   {collectionAddress}")
+    logging.info(
+        "   • record.collectionConfig:    "
+        f"handle={collectionConfig[0]!r}, mintPrice={collectionConfig[1]}, "
+        f"maxSupply={collectionConfig[2]}, royaltyReceiver={collectionConfig[3]}, "
+        f"royaltyBP={collectionConfig[4]}"
+    )
+    logging.info(f"   • record.tweetHashOut:        {tweetHashOut.hex()}")
+    logging.info(f"   • record.licenseTermsConfig:  {tuple(licenseTermsConfig)}")
+    logging.info(f"   • record.licenseMintParams:   {tuple(licenseMintParams)}")
+    logging.info(f"   • record.coCreators:          {coCreators}")
+
+    # Strip handle
+    raw_handle = collectionConfig[0]
+    handle     = raw_handle.lstrip("@")
+    logging.info(f"   • raw handle: {raw_handle!r} → cleaned: {handle!r}")
+
+    # Decode proof → tweet URL
+    tweet_url = ""
+    try:
+        tweet_url = proof_bytes.decode("utf-8").strip()
+    except:
+        pass
+    if tweet_url:
+        logging.info(f"   • decoded proof → tweet URL = {tweet_url}")
+    else:
+        tweet_url = f"https://x.com/{handle}/status/{th.hex()}"
+        logging.info(f"   • proof empty → fallback tweet URL = {tweet_url}")
+
+    # 4) Run scraper and wait for CSV
+    logging.info(f"🖨 Running scraper on: {tweet_url}")
+    proc = subprocess.run(
+        ["python3", "scraper", "--tweet", tweet_url],
+        check=True,
+        capture_output=True,
+        text=True
+    )
+
+    # Dump full scraper stdout for debugging
+    logging.debug("🗒 Raw scraper stdout:\n" + proc.stdout)
+
+    # Extract the “CSV Saved: /path/to/file.csv” line
+    csv_path = None
+    for line in proc.stdout.splitlines():
+        if line.startswith("CSV Saved:"):
+            csv_path = line.split("CSV Saved:", 1)[1].strip()
+            break
+
+    if not csv_path or not os.path.exists(csv_path):
+        logging.error(f"Could not find CSV file path in scraper output!")
+        return
+
+    # Read actual CSV contents
+    with open(csv_path, newline='') as f:
+        csv_out = f.read()
+
+    logging.debug("🗒 Raw scraper CSV file contents:\n" + csv_out)
+    reader = csv.DictReader(csv_out.splitlines())
+    logging.debug(f"🗂 Fieldnames: {reader.fieldnames}")
+
+    row = next(reader)
+    # Normalize keys
+    norm_map = {fn.strip().lower().replace(" ", "").replace("_", ""): fn for fn in reader.fieldnames}
+    def get(label: str) -> str:
+        key = norm_map.get(label.lower().replace(" ", "").replace("_", ""))
+        if not key:
+            raise KeyError(f"Can't find scraper column matching {label!r} in {reader.fieldnames}")
+        return row[key]
+
+    # Extract fields
+    name       = get("Name");       timestamp = get("Timestamp")
+    verified   = get("Verified");   content   = get("Content")
+    comments   = get("Comments");   retweets  = get("Retweets")
+    likes      = get("Likes");      analytics = get("Analytics")
+    tags       = get("Tags");       mentions  = get("Mentions")
+    profileImg = get("Profile Image"); tweetLink = get("Tweet Link")
+    tweetId_raw= get("Tweet ID");   ipfsSs     = get("IPFS Screenshot")
+    tweetId    = tweetId_raw.split(":",1)[-1] if ":" in tweetId_raw else tweetId_raw
+
+    logging.info(f"   • Scraper output: name={name!r}, tweetId={tweetId}, profileImg={profileImg!r}")
+
+    # 5) Find or create collection
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'scraper'))
+    from search_collection import CollectionSearcher
+    searcher = CollectionSearcher(rpc_url=RPC_URL)
+    found    = searcher.search_by_handle(handle)
+    if found:
+        col_addr = found[0]["address"]
+        logging.info(f"   • Found existing collection at {col_addr}")
+        cmd = [
+            "npx", "hardhat", "run", "scraper/mint_existing.ts",
+            "--network", "story_testnet",
+            "--", 
+            "--collection", col_addr
+        ]
+    else:
+        logging.info("   • No existing collection → mint_initial")
+        cmd = [
+            "npx", "hardhat", "run", "scraper/mint_initial.ts",
+            "--network", "story_testnet",
+            "--", 
+            "--handle", handle,
+            "--mintprice", str(collectionConfig[1]),
+            "--maxsupply", str(collectionConfig[2]),
+            "--royaltyreceiver", collectionConfig[3],
+            "--royaltybp", str(collectionConfig[4])
+        ]
+
+    # Pass all data
+    common = [
+        "--name", name,
+        "--timestamp", timestamp,
+        "--verified", verified,
+        "--content", content,
+        "--comments", comments,
+        "--retweets", retweets,
+        "--likes", likes,
+        "--analytics", analytics,
+        "--tags", tags,
+        "--mentions", mentions,
+        "--profileimg", profileImg,
+        "--tweetlink", tweetLink,
+        "--tweetid", tweetId,
+        "--ipfs", ipfsSs,
+        "--depositor", depositor,
+        "--recipient", recipient,
+        "--tweethash", th.hex(),
+        "--collectionaddress", collectionAddress,
+        "--collectionconfig", json.dumps(collectionConfig),
+        "--licensetermsconfig", json.dumps(licenseTermsConfig),
+        "--licensemintparams", json.dumps(licenseMintParams),
+        "--cocreators", json.dumps(coCreators),
+    ]
+    cmd.extend(common)
+    logging.info(f"   • Mint command starts: {' '.join(cmd[:6])} …")
+
+    # 6) Execute mint
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        logging.info("✅ Mint succeeded:\n" + result.stdout)
+    except subprocess.CalledProcessError as e:
+        logging.error("❌ Mint failed:\n" + e.stderr)
+        h_err = send_update(th, "mint-failed")
+        w3.eth.wait_for_transaction_receipt(h_err)
+        return
+
+    # 7) Finalize
+    logging.info("➡ Pipeline complete → marking mint-verified")
+    h2 = send_update(th, "mint-verified")
     w3.eth.wait_for_transaction_receipt(h2)
-    logging.info(f"   mint-verified tx: {h2.hex()}")
 
     state["seen"].append(tx_hash)
     save_state()
+    logging.info("🎉 Done processing " + tx_hash + "\n")
 
-def main(interval):
+# ----------------------------------------------------------------------------
+# Main loop
+# ----------------------------------------------------------------------------
+def main(poll_interval):
     logging.info("► Starting watch loop")
-    while True:
-        latest = w3.eth.block_number
-        if latest > state["last_block"]:
-            logs = contract.events.DepositProcessed().get_logs(
-                from_block=state["last_block"]+1,
-                to_block=latest
-            )
-            for ev in logs:
-                handle_deposit(ev)
-            state["last_block"] = latest
-            save_state()
-        time.sleep(interval)
+    logging.info(f"   Contract: {CONTRACT_ADDRESS}")
+    logging.info(f"   Poll interval: {poll_interval}s")
+    logging.info(f"   Starting from block: {state['last_block']}")
+    logging.info(f"   Current block:  {w3.eth.block_number}")
 
-if __name__=="__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-    p = argparse.ArgumentParser()
-    p.add_argument("--interval", type=int, default=POLL_INTERVAL, help="poll every N seconds")
-    args = p.parse_args()
+    while True:
+        try:
+            latest = w3.eth.block_number
+            if latest > state["last_block"]:
+                logging.info(f"   Checking blocks {state['last_block']+1}→{latest}")
+                logs = contract.events.DepositProcessed().get_logs(
+                    from_block=state['last_block']+1,
+                    to_block=latest
+                )
+                logging.info(f"   Found {len(logs)} DepositProcessed event(s)")
+                for ev in logs:
+                    try:
+                        handle_deposit(ev)
+                    except Exception as e:
+                        logging.error(f"   Error in handle_deposit: {e}")
+                        import traceback; traceback.print_exc()
+                state["last_block"] = latest
+                save_state()
+        except Exception as e:
+            logging.error(f"Error in main loop: {e}")
+            time.sleep(5)
+        time.sleep(poll_interval)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--interval", type=int, default=POLL_INTERVAL,
+                        help="poll every N seconds")
+    args = parser.parse_args()
     main(args.interval)

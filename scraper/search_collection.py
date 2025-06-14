@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Script to search for NFT collections by Twitter handle.
 Usage: python search_collection.py --handle=alice
