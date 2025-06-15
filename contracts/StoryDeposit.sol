@@ -56,27 +56,28 @@ contract IP_Deposit {
         bytes                proof;
         address              collectionAddress;
         CollectionConfig     collectionConfig;
-        bytes32              tweetHash;            // ← now a hash, not a URL
+        bytes32              tweetHash;
         LicenseTermsConfig   licenseTermsConfig;
         LicenseMintParams    licenseMintParams;
         CoCreator[]          coCreators;
     }
 
-    /// @notice on‐chain lookup by tweetHash
     mapping(bytes32 => DepositRecord) private _deposits;
 
+    /// @notice Emitted when a deposit is processed, with every parameter from the trigger
     event DepositProcessed(
-      uint256              indexed ipAmount,
-      bytes32              indexed tweetHash,
-      address              indexed depositor,
-      address                     recipient,
-      string                      validation,
-      address                     collectionAddress,
-      CollectionConfig            collectionConfig,
-      bytes32                     tweetHashOut,      // echo back the key
-      LicenseTermsConfig          licenseTermsConfig,
-      LicenseMintParams           licenseMintParams,
-      CoCreator[]                 coCreators
+        uint256              indexed ipAmount,
+        bytes32              indexed tweetHash,
+        address              indexed depositor,
+        address                     recipient,
+        string                      validation,
+        bytes                       proof,
+        address                     collectionAddress,
+        CollectionConfig            collectionConfig,
+        bytes32                     tweetHashOut,
+        LicenseTermsConfig          licenseTermsConfig,
+        LicenseMintParams           licenseMintParams,
+        CoCreator[]                 coCreators
     );
 
     modifier onlyOwner() {
@@ -88,8 +89,8 @@ contract IP_Deposit {
         owner = msg.sender;
     }
 
-    /// @param tweetHash  keccak256(abi.encodePacked(tweetURL))
-    /// @param collectionAddress  zero‐address if you’ll deploy off‐chain
+    /// @param tweetHash            keccak256(abi.encodePacked(tweetURL))
+    /// @param collectionAddress    zero‐address if you’ll deploy off‐chain
     function depositIP(
         address                    recipient,
         string    calldata         validation,
@@ -120,17 +121,18 @@ contract IP_Deposit {
         }
 
         emit DepositProcessed(
-          msg.value,
-          tweetHash,
-          msg.sender,
-          recipient,
-          validation,
-          collectionAddress,
-          collectionConfig,
-          tweetHash,
-          licenseTermsConfig,
-          licenseMintParams,
-          coCreators
+            msg.value,
+            tweetHash,
+            msg.sender,
+            recipient,
+            validation,
+            proof,
+            collectionAddress,
+            collectionConfig,
+            tweetHash,
+            licenseTermsConfig,
+            licenseMintParams,
+            coCreators
         );
     }
 
