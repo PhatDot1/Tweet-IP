@@ -114,7 +114,7 @@ RECIPIENT           = account.address
 VALIDATION          = "twitter-verification"
 
 # **PROOF** now carries the real tweet URL bytes
-TWEET_URL           = "https://x.com/randombongocat/status/1935457099586175046"
+TWEET_URL           = "https://x.com/randombongocat/status/1935681371642708208"
 PROOF               = TWEET_URL.encode("utf-8")
 
 # Collection config

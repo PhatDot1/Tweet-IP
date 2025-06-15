@@ -6,41 +6,30 @@ import { StoryClient, StoryConfig } from "@story-protocol/core-sdk";
 import axios from "axios";
 import FormData from "form-data";
 
-// Parse command line arguments
-function parseArgs(): {
-  handle: string;
-  mintPrice: string;
-  maxSupply: string;
-  royaltyReceiver: string;
-  royaltyBP: string;
-  name: string;
-  timestamp: string;
-  verified: string;
-  content: string;
-  comments: string;
-  retweets: string;
-  likes: string;
-  analytics: string;
-  tags: string;
-  mentions: string;
-  profileImg: string;
-  tweetLink: string;
-  tweetId: string;
-  ipfs: string;
-  depositor: string;
-  recipient: string;
-  tweetHash: string;
-} {
-  const args = process.argv.slice(2);
-  const params: any = {};
-  
-  for (let i = 0; i < args.length; i += 2) {
-    const key = args[i].replace('--', '');
-    const value = args[i + 1];
-    params[key] = value;
-  }
-  
-  return params;
+// Read data from stdin
+async function readStdinData(): Promise<any> {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    
+    process.stdin.setEncoding('utf8');
+    
+    process.stdin.on('data', (chunk) => {
+      data += chunk;
+    });
+    
+    process.stdin.on('end', () => {
+      try {
+        const parsed = JSON.parse(data);
+        resolve(parsed);
+      } catch (err) {
+        reject(new Error(`Failed to parse stdin JSON: ${(err as Error).message}`));
+      }
+    });
+    
+    process.stdin.on('error', (error) => {
+      reject(error);
+    });
+  });
 }
 
 // Update with your deployed factory address
@@ -57,135 +46,170 @@ const config: StoryConfig = {
 const storyClient = StoryClient.newClient(config);
 
 async function main() {
-  const params = parseArgs();
-  
-  console.log("📋 Parameters received:");
-  console.log("  Handle:", params.handle);
-  console.log("  Mint Price:", params.mintPrice);
-  console.log("  Max Supply:", params.maxSupply);
-  console.log("  Royalty Receiver:", params.royaltyReceiver);
-  console.log("  Royalty BP:", params.royaltyBP);
-  console.log("  Tweet ID:", params.tweetId);
-  console.log("  Tweet Hash:", params.tweetHash);
-  
-  const [signer] = await ethers.getSigners();
-  console.log("Using signer:", signer.address);
+  try {
+    const rawConfig = await readStdinData();
+    
+    // Use JavaScript-style bracket notation to bypass TypeScript checking
+    const handle = rawConfig['handle'];
+    const mintPrice = rawConfig['mintprice'];
+    const maxSupply = rawConfig['maxsupply'];
+    const royaltyReceiver = rawConfig['royaltyreceiver'];
+    const royaltyBp = rawConfig['royaltybp'];
+    const name = rawConfig['name'];
+    const timestamp = rawConfig['timestamp'];
+    const verified = rawConfig['verified'];
+    const content = rawConfig['content'];
+    const comments = rawConfig['comments'];
+    const retweets = rawConfig['retweets'];
+    const likes = rawConfig['likes'];
+    const analytics = rawConfig['analytics'];
+    const tags = rawConfig['tags'];
+    const mentions = rawConfig['mentions'];
+    const profileImg = rawConfig['profileimg'];
+    const tweetLink = rawConfig['tweetlink'];
+    const tweetId = rawConfig['tweetid'];
+    const ipfs = rawConfig['ipfs'];
+    const depositor = rawConfig['depositor'];
+    const recipient = rawConfig['recipient'];
+    const tweetHash = rawConfig['tweethash'];
+    const collectionAddress = rawConfig['collectionaddress'];
+    const collectionConfig = rawConfig['collectionconfig'];
+    const licenseTermsConfig = rawConfig['licensetermsconfig'];
+    const licenseMintParams = rawConfig['licensemintparams'];
+    const coCreators = rawConfig['cocreators'];
+    
+    console.log("📋 Parameters received:");
+    console.log("  Handle:", handle);
+    console.log("  Mint Price:", mintPrice);
+    console.log("  Max Supply:", maxSupply);
+    console.log("  Royalty Receiver:", royaltyReceiver);
+    console.log("  Royalty BP:", royaltyBp);
+    console.log("  Tweet ID:", tweetId);
+    console.log("  Tweet Hash:", tweetHash);
+    
+    const [signer] = await ethers.getSigners();
+    console.log("Using signer:", signer.address);
 
-  // 1) Attach to your deployed factory
-  const factory = (await ethers.getContractAt(
-    "TweetIPFactory",
-    FACTORY_ADDRESS,
-    signer
-  )) as TweetIPFactory;
+    // 1) Attach to your deployed factory
+    const factory = (await ethers.getContractAt(
+      "TweetIPFactory",
+      FACTORY_ADDRESS,
+      signer
+    )) as TweetIPFactory;
 
-  // 2) Create a new collection with dynamic parameters
-  console.log("👉 Creating a new Tweet collection for", params.handle);
-  const createTx = await factory.createTweetCollection(
-    params.handle,
-    ethers.parseEther(params.mintPrice || "0"),
-    parseInt(params.maxSupply),
-    params.royaltyReceiver,
-    parseInt(params.royaltyBP)
-  );
-  await createTx.wait();
-  console.log("✅ Collection created");
+    // 2) Create a new collection with dynamic parameters
+    console.log("👉 Creating a new Tweet collection for", handle);
+    const createTx = await factory.createTweetCollection(
+      handle,
+      ethers.parseEther(mintPrice || "0"),
+      parseInt(maxSupply),
+      royaltyReceiver,
+      parseInt(royaltyBp)
+    );
+    await createTx.wait();
+    console.log("✅ Collection created");
 
-  // 3) Get the newly deployed collection address
-  const total = await factory.totalCollections();
-  const lastIndex = total - 1n;
-  const collection = await factory.allCollections(lastIndex);
-  console.log("Collection address:", collection);
+    // 3) Get the newly deployed collection address
+    const total = await factory.totalCollections();
+    const lastIndex = total - 1n;
+    const collection = await factory.allCollections(lastIndex);
+    console.log("Collection address:", collection);
 
-  // 4) Generate metadata for the tweet
-  const metadata = {
-    name: `Tweet by ${params.name}`,
-    description: params.content || "",
-    image: params.ipfs, // This is already the IPFS URL from scraper
-    external_url: params.tweetLink,
-    attributes: [
-      { trait_type: "Author", value: params.name },
-      { trait_type: "Handle", value: params.handle },
-      { trait_type: "Timestamp", value: params.timestamp },
-      { trait_type: "Verified", value: params.verified },
-      { trait_type: "Comments", value: params.comments },
-      { trait_type: "Retweets", value: params.retweets },
-      { trait_type: "Likes", value: params.likes },
-      { trait_type: "Analytics", value: params.analytics },
-      { trait_type: "Tweet ID", value: params.tweetId },
-      { trait_type: "Tweet Hash", value: params.tweetHash },
-      { trait_type: "Content", value: params.content }
-    ]
-  };
+    // 4) Generate metadata for the tweet
+    const metadata = {
+      name: `Tweet by ${name}`,
+      description: content || "",
+      image: ipfs, // This is already the IPFS URL from scraper
+      external_url: tweetLink,
+      attributes: [
+        { trait_type: "Author", value: name },
+        { trait_type: "Handle", value: handle },
+        { trait_type: "Timestamp", value: timestamp },
+        { trait_type: "Verified", value: verified },
+        { trait_type: "Comments", value: comments },
+        { trait_type: "Retweets", value: retweets },
+        { trait_type: "Likes", value: likes },
+        { trait_type: "Analytics", value: analytics },
+        { trait_type: "Tweet ID", value: tweetId },
+        { trait_type: "Tweet Hash", value: tweetHash },
+        { trait_type: "Content", value: content }
+      ]
+    };
 
-  // Upload metadata to IPFS
-  console.log("📤 Uploading metadata to IPFS...");
-  const metadataUri = await uploadMetadataToIPFS(metadata);
-  console.log("✅ Metadata uploaded:", metadataUri);
+    // Upload metadata to IPFS
+    console.log("📤 Uploading metadata to IPFS...");
+    const metadataUri = await uploadMetadataToIPFS(metadata);
+    console.log("✅ Metadata uploaded:", metadataUri);
 
-  // 5) Mint & register the tweet
-  console.log("👉 Minting & registering tweet", params.tweetId);
-  
-  // Parse tags and mentions from JSON strings
-  const tags = JSON.parse(params.tags || '[]');
-  const mentions = JSON.parse(params.mentions || '[]');
-  
-  const mintTx = await factory.registerTweetAsset(
-    collection,
-    params.recipient || signer.address, // Use recipient from deposit contract
-    metadataUri,
-    params.name,
-    params.handle,
-    params.timestamp,
-    params.verified === 'True' || params.verified === 'true',
-    parseInt(params.comments),
-    parseInt(params.retweets),
-    parseInt(params.likes),
-    parseInt(params.analytics),
-    tags,
-    mentions,
-    params.profileImg,
-    params.tweetLink,
-    params.tweetId,
-    params.ipfs
-  );
-  
-  const receipt = await mintTx.wait();
-  console.log("✅ Mint + IP-registration in block", receipt?.blockNumber || "unknown");
+    // 5) Mint & register the tweet
+    console.log("👉 Minting & registering tweet", tweetId);
+    
+    // Parse tags and mentions from JSON strings
+    const parsedTags = JSON.parse(tags || '[]');
+    const parsedMentions = JSON.parse(mentions || '[]');
+    
+    const mintTx = await factory.registerTweetAsset(
+      collection,
+      recipient || signer.address, // Use recipient from deposit contract
+      metadataUri,
+      name,
+      handle,
+      timestamp,
+      verified === 'True' || verified === 'true',
+      parseInt(comments),
+      parseInt(retweets),
+      parseInt(likes),
+      parseInt(analytics),
+      parsedTags,
+      parsedMentions,
+      profileImg,
+      tweetLink,
+      tweetId,
+      ipfs
+    );
+    
+    const receipt = await mintTx.wait();
+    console.log("✅ Mint + IP-registration in block", receipt?.blockNumber || "unknown");
 
-  // 6) Get the NFT contract and token ID
-  const nft = (await ethers.getContractAt(
-    "StoryNFT",
-    collection,
-    signer
-  )) as StoryNFT;
+    // 6) Get the NFT contract and token ID
+    const nft = (await ethers.getContractAt(
+      "StoryNFT",
+      collection,
+      signer
+    )) as StoryNFT;
 
-  const supply: bigint = await nft.totalSupply();
-  const tokenId = (supply - 1n).toString();
+    const supply: bigint = await nft.totalSupply();
+    const tokenId = (supply - 1n).toString();
 
-  console.log(`Token ID: ${tokenId}`);
-  console.log(`🔗 View your NFT here:`);
-  console.log(`https://aeneid.storyscan.io/token/${collection}/instance/${tokenId}`);
+    console.log(`Token ID: ${tokenId}`);
+    console.log(`🔗 View your NFT here:`);
+    console.log(`https://aeneid.storyscan.io/token/${collection}/instance/${tokenId}`);
 
-  // 7) Get the IP Asset ID
-  console.log("👉 Finding IP Asset ID...");
-  const ipAssetId = await getIpAssetId(collection, tokenId);
-  console.log(`IP Asset ID: ${ipAssetId}`);
+    // 7) Get the IP Asset ID
+    console.log("👉 Finding IP Asset ID...");
+    const ipAssetId = await getIpAssetId(collection, tokenId);
+    console.log(`IP Asset ID: ${ipAssetId}`);
 
-  // 8) Create and attach license terms (can be customized based on deposit params)
-  const licenseTermsId = await createAndAttachLicenseTerms(ipAssetId);
+    // 8) Create and attach license terms (can be customized based on deposit params)
+    const licenseTermsId = await createAndAttachLicenseTerms(ipAssetId);
 
-  // 9) Mint a license token
-  await mintLicenseToken(ipAssetId, licenseTermsId);
+    // 9) Mint a license token
+    await mintLicenseToken(ipAssetId, licenseTermsId);
 
-  // 10) Log completion for the watch script
-  console.log("🎉 Initial mint complete!");
-  console.log({
-    collection,
-    tokenId,
-    ipAssetId,
-    tweetHash: params.tweetHash,
-    tweetId: params.tweetId
-  });
+    // 10) Log completion for the watch script
+    console.log("🎉 Initial mint complete!");
+    console.log({
+      collection,
+      tokenId,
+      ipAssetId,
+      tweetHash: tweetHash,
+      tweetId: tweetId
+    });
+    
+  } catch (err) {
+    console.error('Error reading stdin data or processing:', (err as Error).message);
+    process.exit(1);
+  }
 }
 
 async function getIpAssetId(nftContract: string, tokenId: string): Promise<string> {
@@ -202,8 +226,8 @@ async function getIpAssetId(nftContract: string, tokenId: string): Promise<strin
     });
     
     return ipAssetResponse.ipId || "";
-  } catch (error) {
-    console.error("Error getting IP Asset ID:", error);
+  } catch (err) {
+    console.error("Error getting IP Asset ID:", err);
     
     // Calculate IP Asset ID deterministically
     const ipAssetId = ethers.solidityPackedKeccak256(
@@ -258,9 +282,9 @@ async function createAndAttachLicenseTerms(ipAssetId: string): Promise<string> {
     }
 
     return licenseResponse.licenseTermsId?.toString() || "1";
-  } catch (error) {
-    console.error("Error creating/attaching license terms:", error);
-    throw error;
+  } catch (err) {
+    console.error("Error creating/attaching license terms:", err);
+    throw err;
   }
 }
 
@@ -282,8 +306,8 @@ async function mintLicenseToken(ipAssetId: string, licenseTermsId: string) {
     console.log(`License Token IDs: ${licenseResponse.licenseTokenIds}`);
     
     return licenseResponse.licenseTokenIds;
-  } catch (error) {
-    console.error("Error minting license token:", error);
+  } catch (err) {
+    console.error("Error minting license token:", err);
     console.log("⚠️  License token minting failed - this is expected if license terms weren't properly attached");
   }
 }
@@ -311,14 +335,15 @@ async function uploadMetadataToIPFS(metadata: any): Promise<string> {
     } else {
       throw new Error(`Failed to pin to IPFS: ${response.statusText}`);
     }
-  } catch (error) {
-    console.error("Error uploading to IPFS:", error);
+  } catch (err) {
+    console.error("Error uploading to IPFS:", err);
     // Fallback to placeholder
     return `ipfs://metadata_${metadata.attributes.find((a: any) => a.trait_type === "Tweet ID")?.value}`;
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exitCode = 1;
+// Make sure to call main() and handle it properly
+main().catch((err) => {
+  console.error('Script failed:', err);
+  process.exit(1);
 });

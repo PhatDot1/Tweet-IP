@@ -179,7 +179,7 @@ def handle_deposit(evt):
     # Dump full scraper stdout for debugging
     logging.debug("🗒 Raw scraper stdout:\n" + proc.stdout)
 
-    # Extract the “CSV Saved: /path/to/file.csv” line
+    # Extract the "CSV Saved: /path/to/file.csv" line
     csv_path = None
     for line in proc.stdout.splitlines():
         if line.startswith("CSV Saved:"):
@@ -218,66 +218,98 @@ def handle_deposit(evt):
     tweetId    = tweetId_raw.split(":",1)[-1] if ":" in tweetId_raw else tweetId_raw
 
     logging.info(f"   • Scraper output: name={name!r}, tweetId={tweetId}, profileImg={profileImg!r}")
+    logging.info(f"   • Raw tweetId: {tweetId_raw!r} → cleaned: {tweetId!r}")
+
+    # Debug: Print all extracted fields
+    logging.debug(f"   • All extracted fields:")
+    logging.debug(f"     - name: {name!r}")
+    logging.debug(f"     - timestamp: {timestamp!r}")
+    logging.debug(f"     - verified: {verified!r}")
+    logging.debug(f"     - content: {content!r}")
+    logging.debug(f"     - comments: {comments!r}")
+    logging.debug(f"     - retweets: {retweets!r}")
+    logging.debug(f"     - likes: {likes!r}")
+    logging.debug(f"     - analytics: {analytics!r}")
+    logging.debug(f"     - tags: {tags!r}")
+    logging.debug(f"     - mentions: {mentions!r}")
+    logging.debug(f"     - profileImg: {profileImg!r}")
+    logging.debug(f"     - tweetLink: {tweetLink!r}")
+    logging.debug(f"     - tweetId: {tweetId!r}")
+    logging.debug(f"     - ipfsSs: {ipfsSs!r}")
 
     # 5) Find or create collection
     sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'scraper'))
     from search_collection import CollectionSearcher
     searcher = CollectionSearcher(rpc_url=RPC_URL)
     found    = searcher.search_by_handle(handle)
+
+    # Prepare data to send via stdin
+    data = {
+        "name": name,
+        "timestamp": timestamp,
+        "verified": verified,
+        "content": content,
+        "comments": comments,
+        "retweets": retweets,
+        "likes": likes,
+        "analytics": analytics,
+        "tags": tags,
+        "mentions": mentions,
+        "profileimg": profileImg,
+        "tweetlink": tweetLink,
+        "tweetid": tweetId,
+        "ipfs": ipfsSs,
+        "depositor": depositor,
+        "recipient": recipient,
+        "tweethash": th.hex(),
+        "collectionaddress": collectionAddress,
+        "collectionconfig": collectionConfig,
+        "licensetermsconfig": licenseTermsConfig,
+        "licensemintparams": licenseMintParams,
+        "cocreators": coCreators,
+        "handle": handle
+    }
+
     if found:
         col_addr = found[0]["address"]
         logging.info(f"   • Found existing collection at {col_addr}")
+        data["collection"] = col_addr
         cmd = [
             "npx", "hardhat", "run", "scraper/mint_existing.ts",
-            "--network", "story_testnet",
-            "--", 
-            "--collection", col_addr
+            "--network", "story_testnet"
         ]
     else:
         logging.info("   • No existing collection → mint_initial")
+        data.update({
+            "mintprice": str(collectionConfig[1]),
+            "maxsupply": str(collectionConfig[2]),
+            "royaltyreceiver": collectionConfig[3],
+            "royaltybp": str(collectionConfig[4])
+        })
         cmd = [
             "npx", "hardhat", "run", "scraper/mint_initial.ts",
-            "--network", "story_testnet",
-            "--", 
-            "--handle", handle,
-            "--mintprice", str(collectionConfig[1]),
-            "--maxsupply", str(collectionConfig[2]),
-            "--royaltyreceiver", collectionConfig[3],
-            "--royaltybp", str(collectionConfig[4])
+            "--network", "story_testnet"
         ]
 
-    # Pass all data
-    common = [
-        "--name", name,
-        "--timestamp", timestamp,
-        "--verified", verified,
-        "--content", content,
-        "--comments", comments,
-        "--retweets", retweets,
-        "--likes", likes,
-        "--analytics", analytics,
-        "--tags", tags,
-        "--mentions", mentions,
-        "--profileimg", profileImg,
-        "--tweetlink", tweetLink,
-        "--tweetid", tweetId,
-        "--ipfs", ipfsSs,
-        "--depositor", depositor,
-        "--recipient", recipient,
-        "--tweethash", th.hex(),
-        "--collectionaddress", collectionAddress,
-        "--collectionconfig", json.dumps(collectionConfig),
-        "--licensetermsconfig", json.dumps(licenseTermsConfig),
-        "--licensemintparams", json.dumps(licenseMintParams),
-        "--cocreators", json.dumps(coCreators),
-    ]
-    cmd.extend(common)
-    logging.info(f"   • Mint command starts: {' '.join(cmd[:6])} …")
+    logging.info(f"   • Mint command: {' '.join(cmd)}")
+    
+    # Debug: Print the data being sent to stdin
+    logging.debug(f"   • Data being sent via stdin:")
+    for key, value in data.items():
+        logging.debug(f"     - {key}: {value!r}")
 
-    # 6) Execute mint
+    # 6) Execute mint with data passed via stdin
     try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        stdin_data = json.dumps(data)
+        result = subprocess.run(
+            cmd, 
+            input=stdin_data,
+            text=True,
+            check=True, 
+            capture_output=True
+        )
         logging.info("✅ Mint succeeded:\n" + result.stdout)
+        
     except subprocess.CalledProcessError as e:
         logging.error("❌ Mint failed:\n" + e.stderr)
         h_err = send_update(th, "mint-failed")
