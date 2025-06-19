@@ -179,10 +179,11 @@ python watch_and_run.py
 
 ## 🌟 Future Roadmap
 
-- **Video & Media Support**: 
+- **Video & Media Support**: Simple, just need to add logic on: if media - mint media link instead of ipfs
 - **Dashboard**: Real‑time monitoring, analytics, and reclamations.  
-- **Community Tools**: Bulk mint, Twitter giveaways, auction integration.
+- **Community Tools**: Bulk mint, API mint, Mint Feed, In-app purchasing.
 - **Creator Incentives/Rewards**: Further integration with Story Protocol for advanced creator monetization and reward mechanisms.
+- **Much More!**: See frontend readme/app
 
 ---
 
