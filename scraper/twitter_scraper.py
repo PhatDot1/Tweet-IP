@@ -29,9 +29,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 
-# NEW: Import AI analysis tool for tweet deletion likelihood evaluation
-from ai_analysis import analyze_tweet
-
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
@@ -253,7 +250,7 @@ class Twitter_Scraper:
             logging.error("Bookmarks is not set.")
             sys.exit(1)
         else:
-            url = f"https://twitter..com/i/bookmarks"
+            url = f"https://twitter.com/i/bookmarks"
             self.driver.get(url)
             sleep(3)
 
@@ -326,14 +323,12 @@ class Twitter_Scraper:
                                           scrape_poster_details=self.scraper_details["poster_details"])
                             if tweet and not tweet.error and tweet.tweet is not None and not tweet.is_ad:
                                 try:
-                                    # Capture the screenshot and build the hosted URL.
                                     ipfs_hash = screenshot_and_pin(card)
                                     ipfs_url = f"https://gateway.pinata.cloud/ipfs/{ipfs_hash}"
                                     print(f"Tweet screenshot pinned to IPFS: {ipfs_url}")
                                 except Exception as e:
                                     print(f"Error pinning tweet screenshot: {e}")
                                     ipfs_url = ""
-                                # Append the hosted IPFS URL as the last element.
                                 tweet_data = list(tweet.tweet)
                                 tweet_data.append(ipfs_url)
                                 self.data.append(tuple(tweet_data))
@@ -387,6 +382,41 @@ class Twitter_Scraper:
         if not no_tweets_limit:
             print(f"Tweets: {len(self.data)} out of {self.max_tweets}")
 
+    def scrape_by_url(self, tweet_url: str, max_tweets: int = 1):
+        """
+        Navigate directly to a single tweet URL, scrape it once,
+        pin its screenshot, and then save & exit.
+        """
+        logging.info(f"Scraping single tweet URL: {tweet_url}")
+        self.driver.get(tweet_url)
+        sleep(3)
+
+        self.get_tweet_cards()
+        if not self.tweet_cards:
+            raise RuntimeError("No tweet found at that URL.")
+        card = self.tweet_cards[0]
+
+        tweet = Tweet(card=card, driver=self.driver, actions=self.actions,
+                      scrape_poster_details=self.scraper_details["poster_details"])
+        if tweet.error or tweet.is_ad or tweet.tweet is None:
+            raise RuntimeError("Failed to parse tweet on that page.")
+
+        try:
+            ipfs_hash = screenshot_and_pin(card)
+            ipfs_url = f"https://gateway.pinata.cloud/ipfs/{ipfs_hash}"
+            logging.info(f"Tweet screenshot pinned to IPFS: {ipfs_url}")
+        except Exception as e:
+            logging.error(f"Error pinning tweet screenshot: {e}")
+            ipfs_url = ""
+
+        record = list(tweet.tweet)
+        record.append(ipfs_url)
+        self.data.append(tuple(record))
+
+        self.save_to_csv()
+        self.driver.quit()
+        sys.exit(0)
+
     def save_to_csv(self):
         print("Saving Tweets to CSV...")
         now = datetime.now()
@@ -409,21 +439,8 @@ class Twitter_Scraper:
             "Profile Image": [tweet[12] for tweet in self.data],
             "Tweet Link": [tweet[13] for tweet in self.data],
             "Tweet ID": [f"tweet_id:{tweet[14]}" for tweet in self.data],
-            "IPFS Screenshot": [tweet[-1] for tweet in self.data]  # Use the last element
+            "IPFS Screenshot": [tweet[-1] for tweet in self.data]
         }
-        # Analyze tweets for deletion likelihood
-        deletion_scores = []
-        print("Analyzing tweets for deletion likelihood (this may take a while)...")
-        for tweet in self.data:
-            content = tweet[4]
-            if not content.strip():
-                score, analysis = 0.0, "No content provided."
-            else:
-                score, analysis = analyze_tweet(content)
-            print(f"Tweet analysis: {analysis}")
-            deletion_scores.append(score)
-        data["Deletion Likelihood"] = deletion_scores
-        # Build DataFrame without Emojis column
         df = pd.DataFrame(data)
         current_time = now.strftime("%Y-%m-%d_%H-%M-%S")
         file_path = f"{folder_path}{current_time}_tweets_1-{len(self.data)}.csv"
