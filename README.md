@@ -1,199 +1,6 @@
-Need Deposit To Specify:
-Security Params Plus:
-    "@alice",        // handle
-    0,               // mintPrice
-    9000,              // maxSupply
-    signer.address,  // royaltyReceiver [should be set to current owner?]
-    500              // royaltyBP (5%) [prob 100%??? Since means sale??]
-
-    "ipfs://QmDummyUri", // metadata
-    "Alice Example", // Asset Name
-    "@alice", // handle
-    new Date().toISOString(), 
-    false,
-    0, 0, 0, 0,
-    ["#test"],
-    ["@bob886"], // have this increment @name_{num} +1 each time.
-    "https://example.com/avatar.jpg",
-    "https://twitter.com/alice/status/886", // must be unqiue tweet enforced
-    "886", // must be unqiue
-    "ipfs://QmDummyScreenshot"
-
-    const licenseResponse = await storyClient.license.registerPILTerms({
-      defaultMintingFee: 0n,
-      currency: '0x1514000000000000000000000000000000000000', // $WIP token
-      royaltyPolicy: '0xBe54FB168b3c982b7AaE60dB6CF75Bd8447b390E', // RoyaltyPolicyLAP
-      transferable: true,
-      expiration: 0n,
-      commercialUse: true,
-      commercialAttribution: true,
-      commercializerChecker: '0x0000000000000000000000000000000000000000',
-      commercializerCheckerData: '0x',
-      commercialRevShare: 20, // 20% revenue share
-      commercialRevCeiling: 0n,
-      derivativesAllowed: true,
-      derivativesAttribution: true,
-      derivativesApproval: false,
-      derivativesReciprocal: true,
-      derivativeRevCeiling: 0n,
-      uri: '',
-      // Fixed: Remove waitForTransaction from txOptions
-      txOptions: {}
-
-      licenseTermsId: "1", // This should be the actual license terms ID from the previous step
-      licensorIpId: ipAssetId as Address,
-      receiver: account.address,
-      amount: 1,
-      maxMintingFee: BigInt(0),
-      maxRevenueShare: 100,
-      // Fixed: Remove waitForTransaction from txOptions
-      txOptions: {}
-
-  tl;dr:
-1.  Collection creation (if you’re also deploying a new one) [user data]
-handle (string) – e.g. "@alice"
-
-mintPrice (number or BigNumber) – wei price to mint
-
-maxSupply (number) – cap on total mints
-
-royaltyReceiver (address) – who gets on-chain royalties
-
-royaltyBP (number) – basis-points (500 = 5%)
-
-2. Minting & registering the tweet [data from the tweet]
-recipient (address) – who the NFT is minted to
-
-uri (string) – your token’s metadata URI (e.g. an IPFS link)
-
-name_ (string) – tweet author’s display name
-
-handle_ (string) – tweet author’s handle
-
-timestamp_ (string) – when the tweet was posted (ISO)
-
-verified_ (boolean) – whether the author is verified
-
-comments_, retweets_, likes_, analytics_ (numbers) – on-chain stats
-
-tags_ (string[]) – array of hashtags
-
-mentions_ (string[]) – array of @-mentions
-
-profileImage_ (string) – avatar URL
-
-tweetLink_ (string) – link to the original tweet
-
-tweetId_ (string) – the tweet’s unique ID
-
-ipfsScreenshot_ (string) – URI of a screenshot
-
-3. IP-registration metadata (if you want to customize) [data from the tweet]
-ipMetadataURI, ipMetadataHash
-
-nftMetadataURI, nftMetadataHash
-
-(these are currently blank in your script but can be set if you have off-chain metadata)
-
-4. License-terms setup [user defined data]
-defaultMintingFee (BigInt)
-
-currency (address) – e.g. your token used for fees
-
-royaltyPolicy (address) – on-chain royalty policy module
-
-transferable (boolean)
-
-expiration (BigInt)
-
-commercialUse, commercialAttribution (booleans)
-
-commercialRevShare (number)
-
-commercialRevCeiling (BigInt)
-
-derivativesAllowed, derivativesAttribution, derivativesApproval, derivativesReciprocal (booleans)
-
-derivativeRevCeiling (BigInt)
-
-uri (string) – optional pointer to human-readable license text
-
-5. License-token minting [user defined data]
-licenseTermsId (string or number) – from the previous step
-
-licensorIpId (address) – the IP asset you just registered
-
-receiver (address) – who gets the license token
-
-amount (number) – how many tokens to mint
-
-maxMintingFee (BigInt)
-
-maxRevenueShare (number)
-
-
-
-
-PythonSDK issues:
-IPAsset.register raw response: {'tx_hash': None, 'ip_id': '0xC323fe0C32133621630B709BEFD8D769696Cd537'}
-No TXhash making it difficult to create & attatch license terms. So using TS SDK for this.
-
-Bare Factory:
-
-
-Factory With ^ + Basic IP and Story Metadata + Bugfix on NFT IP registration:
-0x17C35b9175B42e19e4f8793Aeab28D255d1c6192
-
-Factory With ^ + License terms and Optional Derivatives Added:
-0x8a1885132A04fe94850BEc4f47C55Ca466C7Bb81
-
-Factory With ^ + RoyaltyModule and ModuleRegistry:
-
-
-TODO:
-Streamline comms between frontend and backend for proper error handling and edge cases not being a black box to users
-
-Adding:
-custom PIL license
-IP metadata
-Link co-creators 
-
-/////////
-
-WANT TO:
-Pre-mint a license manually before the IP registration
-AKA need to:
-
-Deploy the NFT collection
-
-Call create_license(...) with a known/fixed ref_ip_id
-
-Then register the IP and attach license terms in the same call
-
-////////
-
-NOTE:
-ADDING ALL AT ONCE TOO AUDACIOS, FIRST FIX OG CONTRACT TO REGISTER NFT AS IP, NOT CONTRACT
-THEN ITERATIVELY 1 BY 1 ADD AND TEST:
-Co-creators with names + wallets
-Metadata URI [P Metadata]
-Custom license fields [PIL License]
-
-////////
-
-ADJUST FRONTEND TO ALLOW FOR THIS CUSTOMIZABLE TOO:
-✅ PIL License	story_input["license_terms"]	Custom royalty, remix, and revenue params
-✅ IP Metadata	story_input["ip_metadata_uri"]	NFT + IP metadata bundled
-✅ Co-Creators	story_input["co_creators"]	Off-chain for now, can be used in UI or indexed
-
-RUN EXAMPLE:
-python watch_and_run.py --interval 10
-
-
-
 # 🌟 Story Protocol Backend
 
-Welcome to **Story Protocol**, the seamless bridge that transforms any public tweet into a secure, on-chain NFT asset—capturing text, images, video, and beyond. Whether you’re an artist, influencer, or just love storytelling, minting your tweet is now as simple as a deposit and an automated scrape.
+Welcome to **Story Protocol**, the seamless bridge that transforms any public tweet into a secure, on-chain NFT asset—capturing text, images, video, and beyond. With the latest updates, we've integrated advanced Story Protocol functionalities, enabling robust IP asset management, programmable licensing, and derivative creation directly on-chain. Whether you’re an artist, influencer, or just love storytelling, minting your tweet is now as simple as a deposit and an automated scrape, all while ensuring your intellectual property is protected and monetizable through cutting-edge blockchain technology.
 
 ---
 
@@ -203,6 +10,9 @@ Welcome to **Story Protocol**, the seamless bridge that transforms any public tw
 - **End-to-End Automation**: From Twitter scraping to IPFS pinning to on‑chain NFT mint, our backend handles it all.
 - **Future‑Proof**: NFTs are minted on the customizable factory, enabling royalty splits, metadata updates, and unlimited supply controls.
 - **Transparent & Verifiable**: Every action emits events; you can track each mint through the deposit contract.
+- **On-chain IP Asset Management**: Leverage Story Protocol's core modules to register your tweet NFTs as official IP Assets, enabling verifiable ownership and rights management.
+- **Programmable Licensing**: Attach customizable, on-chain licenses (PILs) to your IP Assets, defining terms for commercial use, derivatives, and revenue sharing.
+- **Derivative Tracking**: Easily track and manage derivatives created from your original IP, ensuring proper attribution and royalty distribution.
 
 ---
 
@@ -215,17 +25,23 @@ Welcome to **Story Protocol**, the seamless bridge that transforms any public tw
 
 2. **On‑Chain Factory & NFT Minting**  
    - **Tweet Collection Factory**: Deploy a dedicated NFT collection per Twitter handle.  
-   - **Asset Registration**: Register tweet metadata (text, author, metrics) as NFT attributes.  
+   - **Asset Registration**: Register tweet metadata (text, author, metrics) as NFT attributes.
    - **Royalties & Supply**: Configure mint price, max supply, and royalty BPS.
 
 3. **Deposit Watcher**  
-   - **Deposit Contract**: Users deposit exactly 1 ETH with `twitter-verification` validation tag.  
+   - **Deposit Contract**: Users deposit exactly 1 ETH with `twitter-verification` validation tag, along with detailed configuration for collection, licensing, and co-creators.  
    - **Event Handler**: Monitors `DepositProcessed`, validates tweet URL, kicks off scraper & mint.  
    - **Stateful & Retry‑Safe**: Persists last processed block and avoids duplicates.
 
 4. **Register IP Script**  
    - **CSV or Direct**: Map scraped tweet data into contract calls.  
    - **Gas‑Efficient**: Estimate and buffer gas, auto‑nonce management, receipt polling.
+
+5. **Story Protocol Integration**
+   - **IP Asset Registration**: Automatically registers minted NFTs as IP Assets on the Story Protocol registry.
+   - **Programmable IP Licenses (PILs)**: Attaches pre-defined or custom PILs to IP Assets, enabling on-chain licensing terms for commercial use, derivatives, and revenue sharing.
+   - **License Token Minting**: Facilitates the minting of license tokens, representing on-chain permissions for using the IP.
+   - **Derivative Registration**: Supports the registration of new IP Assets as derivatives of existing ones, ensuring proper lineage and rights management.
 
 ---
 
@@ -247,6 +63,12 @@ Welcome to **Story Protocol**, the seamless bridge that transforms any public tw
                                                      +-------------+
                                                      |  NFT Asset  |
                                                      +-------------+
+                                                           |
+                                                           v
+                                                     +-------------------+
+                                                     | Story Protocol    |
+                                                     | (IP Asset, PILs)  |
+                                                     +-------------------+
 ```
 
 ---
@@ -275,7 +97,18 @@ Welcome to **Story Protocol**, the seamless bridge that transforms any public tw
    # Blockchain
    RPC_URL=https://aeneid.storyrpc.io
    PRIVATE_KEY=0x...
-   DEPOSIT_CONTRACT=0xAF2A0D1CDAe0...
+   DEPOSIT_CONTRACT=0x03D95676b52E5b1D65345D6fbAA5CC9319297026 
+   TWEET_FACTORY_ADDRESS=0x8a1885132A04fe94850BEc4f47C55Ca466C7Bb81 
+   WALLET_PRIVATE_KEY=0x... 
+   RPC_PROVIDER_URL=https://aeneid.storyrpc.io 
+   STORY_IP_ASSET_REGISTRY=0x77319B4031e6eF1250907aa00018B8B1c67a244b
+   STORY_METADATA_MODULE=0x6E81a25C99C6e8430aeC7353325EB138aFE5DC16
+   STORY_LICENSING_MODULE=0x04fbd8a2e56dd85CFD5500A4A4DfA955B9f1dE6f
+   STORY_ROYALTY_MODULE=0xD2f60c40fEbccf6311f8B47c4f2Ec6b040400086
+   STORY_LICENSE_REGISTRY=0x529a750E02d8E2f15649c13D69a465286a780e24
+   STORY_MODULE_REGISTRY=0x022DBAAeA5D8fB31a0Ad793335e39Ced5D631fa5
+   STORY_PILICENSE_TEMPLATE=0x2E896b0b2Fdb7457499B56AAaA4AE55BCB4Cd316
+   STORY_ACCESS_MANAGER=0xFdece7b8a2f55ceC33b53fd28936B4B1e3153d53
    ```
 
 3. **Install dependencies**  
@@ -283,13 +116,23 @@ Welcome to **Story Protocol**, the seamless bridge that transforms any public tw
    python3 -m venv venv
    source venv/bin/activate
    pip install -r requirements.txt
+   npm install # For Hardhat and Story Protocol SDK dependencies
    ```
 
 ---
 
 ## ⚙️ Usage
 
-### 1. Manual Scrape & Mint (CLI)
+
+### 1. Deposit‑Driven Mint 
+
+Run the watcher to auto‑detect deposits and mint:
+
+```bash
+python watch_and_run.py
+```
+
+### 2. Testing / Manual Scrape & Mint (CLI)
 
 - **Single Tweet**  
   ```bash
@@ -303,36 +146,34 @@ Welcome to **Story Protocol**, the seamless bridge that transforms any public tw
   python scraper --query "blockchain" -t 20
   ```
 
-### 2. Deposit‑Driven Mint (Daemon)
-
-Run the watcher to auto‑detect deposits and mint:
-
-```bash
-python watch_deposits.py --interval 15
-```
-
 ---
 
 ## 📜 Smart Contracts
 
-1. **Deposit Contract**  
-   - `depositIP(recipient, validation, proof, handle, tweetUrl)`  
-   - Emits `DepositProcessed(ipAmount, depositor, recipient, validation, proof, handle, tweet)`.
+1. **Deposit Contract (`IP_Deposit.sol`)**  
+   - `depositIP(recipient, validation, proof, collectionAddress, collectionConfig, tweetHash, licenseTermsConfig, licenseMintParams, coCreators)`: Emits `DepositProcessed` with detailed configuration for collection, licensing, and co-creators.
+   - Supports new structs: `CollectionConfig`, `LicenseTermsConfig`, `LicenseMintParams`, and `CoCreator`.
 
-2. **Factory Contract**  
-   - `createTweetCollection(string handle, uint256 mintPrice, uint256 maxSupply, address royaltyReceiver, uint96 royaltyBP)`  
-   - `registerTweetAsset(address collection, address to, string uri, string name, string handle, string timestamp, bool verified, uint256 comments, uint256 retweets, uint256 likes, uint256 analytics, string[] tags, string[] mentions, string profileImage, string tweetLink, string tweetId, string ipfsScreenshot)`.
+2. **Factory Contract (`TweetIPFactory.sol`)**  
+   - `createTweetCollection(string handle, uint256 mintPrice, uint256 maxSupply, address royaltyReceiver, uint96 royaltyBP)`: Deploys a new `StoryNFT` contract, passing Story Protocol core module addresses.
+   - `registerTweetAsset(...)`: Mints an NFT and registers its metadata.
 
-3. **NFT Collection**  
+3. **NFT Collection (`StoryNFT.sol`)**  
    - ERC‑721 with configurable royalties (EIP‑2981).
+   - Integrates directly with Story Protocol's `IIPAssetRegistry`, `ILicenseRegistry`, `ILicensingModule`, `IPILicenseTemplate`, and `ICoreMetadataModule`.
+   - `safeMint(...)`: Mints a Tweet NFT, stores metadata, and registers it as an IP Asset.
+   - `mintAndRegisterAndCreateTermsAndAttach(address receiver)`: Mints an NFT, registers it as an IP Asset, creates a `commercialRemix` PIL with 20% revenue share, and attaches it to the IP Asset.
+   - `mintLicenseTokenAndRegisterDerivative(address parentIpId, uint256 licenseTermsId, address receiver)`: Mints a license token and registers a new IP Asset as a derivative.
 
 ---
 
 ## 🎉 Demo & Explorer
 
-- **Mint a tweet**: deposit 1 IP to the deposit contract with `twitter-verification` tag.
+- **Mint a tweet**: deposit 1 IP to the deposit contract with `twitter-verification` tag, providing necessary `CollectionConfig`, `LicenseTermsConfig`, `LicenseMintParams`, and `CoCreator` data.
 - **View your NFT**:  
   `https://aeneid.storyscan.io/token/{COLLECTION_ADDRESS}/instance/{TOKEN_ID}`
+- **View your IP Asset**:  
+  `https://aeneid.storyscan.io/ip-asset/{IP_ASSET_ID}`
 
 ---
 
@@ -341,6 +182,8 @@ python watch_deposits.py --interval 15
 - **Video & Media Support**: 
 - **Dashboard**: Real‑time monitoring, analytics, and reclamations.  
 - **Community Tools**: Bulk mint, Twitter giveaways, auction integration.
-- CREATOR INSENTIVES/REWARDS
+- **Creator Incentives/Rewards**: Further integration with Story Protocol for advanced creator monetization and reward mechanisms.
 
 ---
+
+
